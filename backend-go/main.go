@@ -2,10 +2,13 @@ package main
 
 import (
 	"context"
+	"embed"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"kayran/backend/config"
 	"kayran/backend/db"
@@ -15,6 +18,49 @@ import (
 
 	"github.com/go-chi/chi/v5"
 )
+
+//go:embed frontend-dist
+var embeddedFS embed.FS
+
+func getFrontendFS() http.FileSystem {
+	sub, err := fs.Sub(embeddedFS, "frontend-dist")
+	if err == nil {
+		f, err := sub.Open("index.html")
+		if err == nil {
+			f.Close()
+			return http.FS(sub)
+		}
+	}
+	angularDir := findAngularDir()
+	if angularDir != "" {
+		return http.Dir(angularDir)
+	}
+	return nil
+}
+
+func spaHandler(fsys http.FileSystem) http.HandlerFunc {
+	fileServer := http.FileServer(fsys)
+	return func(w http.ResponseWriter, r *http.Request) {
+		path := strings.TrimPrefix(r.URL.Path, "/")
+		if path == "" {
+			path = "index.html"
+		}
+		f, err := fsys.Open(path)
+		if err != nil {
+			f, err = fsys.Open("index.html")
+			if err != nil {
+				http.NotFound(w, r)
+				return
+			}
+			defer f.Close()
+			s, _ := f.Stat()
+			http.ServeContent(w, r, "index.html", s.ModTime(), f)
+			return
+		}
+		f.Close()
+		fileServer.ServeHTTP(w, r)
+	}
+}
 
 func main() {
 	cfg := config.Load()
@@ -36,16 +82,6 @@ func main() {
 
 	r := chi.NewRouter()
 	r.Use(mw.CORS)
-
-	// Serve Angular frontend
-	angularDir := findAngularDir()
-	if angularDir != "" {
-		fileServer := http.FileServer(http.Dir(angularDir))
-		r.Handle("/frontend/*", http.StripPrefix("/frontend/", fileServer))
-		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-			http.ServeFile(w, r, filepath.Join(angularDir, "index.html"))
-		})
-	}
 
 	// API routes
 	r.Route("/auth", func(r chi.Router) {
@@ -134,10 +170,19 @@ func main() {
 	r.Get("/franchises", h.ListFranchises)
 	r.Get("/franchises/{id}", h.GetFranchise)
 
-	// SPA fallback: serve index.html for unmatched routes (Angular client-side routing)
-	if angularDir != "" {
-		r.NotFound(func(w http.ResponseWriter, r *http.Request) {
-			http.ServeFile(w, r, filepath.Join(angularDir, "index.html"))
+	// Frontend SPA — only for non-API paths
+	frontendFS := getFrontendFS()
+	if frontendFS != nil {
+		r.NotFound(spaHandler(frontendFS))
+		r.Get("/*", func(w http.ResponseWriter, r *http.Request) {
+			path := r.URL.Path
+			for _, p := range []string{"/auth", "/users", "/events", "/boats", "/rentals", "/gps", "/teams", "/tournaments", "/matches", "/profiles", "/routes", "/franchises"} {
+				if path == p || strings.HasPrefix(path, p+"/") {
+					http.NotFound(w, r)
+					return
+				}
+			}
+			spaHandler(frontendFS).ServeHTTP(w, r)
 		})
 	}
 
@@ -152,6 +197,7 @@ func findAngularDir() string {
 	candidates := []string{
 		filepath.Join(base, "..", "frontend-angular", "dist", "frontend-angular", "browser"),
 		filepath.Join(base, "..", "frontend"),
+		filepath.Join(base, "frontend-dist"),
 	}
 	for _, p := range candidates {
 		abs, err := filepath.Abs(p)
