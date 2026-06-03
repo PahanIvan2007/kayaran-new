@@ -1,7 +1,7 @@
-const CACHE = 'kayran-static-v5';
+const CACHE = 'kayran-v6';
 
 self.addEventListener('install', e => {
-  e.waitUntil(self.skipWaiting());
+  self.skipWaiting();
 });
 
 self.addEventListener('activate', e => {
@@ -14,42 +14,31 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
-  if (url.origin !== location.origin || url.pathname.startsWith('/api/')) {
+  if (url.origin !== location.origin) { e.respondWith(fetch(e.request)); return; }
+  const isStatic = /\.(js|css|html?|png|jpg|jpeg|gif|svg|ico|webp|woff2?|ttf|eot|map)$/i.test(url.pathname);
+  if (isStatic) {
+    e.respondWith(staleWhileRevalidate(e.request));
+  } else if (e.request.method === 'GET') {
     e.respondWith(networkFirst(e.request));
-    return;
   }
-  e.respondWith(staleWhileRevalidate(e.request));
 });
 
 async function staleWhileRevalidate(req) {
   const cached = await caches.match(req);
-  const fetchPromise = fetch(req).then(res => {
-    if (res.ok) {
-      const clone = res.clone();
-      caches.open(CACHE).then(c => c.put(req, clone));
-    }
-    return res;
-  }).catch(() => cached);
-  return cached || fetchPromise;
+  const net = fetch(req).then(r => (r.ok && caches.open(CACHE).then(c => c.put(req, r.clone())), r));
+  return cached || net;
 }
 
 async function networkFirst(req) {
   try {
     const res = await fetch(req);
-    if (res.ok) {
-      const clone = res.clone();
-      caches.open(CACHE).then(c => c.put(req, clone));
-    }
+    if (res.ok) caches.open(CACHE).then(c => c.put(req, res.clone()));
     return res;
   } catch {
     const cached = await caches.match(req);
-    if (cached) return cached;
-    if (req.url.endsWith('/auth/me')) {
+    if (req.url.endsWith('/auth/me') && !cached) {
       return new Response(JSON.stringify({}), { status: 401, headers: { 'Content-Type': 'application/json' }});
     }
-    return new Response(JSON.stringify({ error: 'offline' }), {
-      status: 503,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return cached || fetch(req);
   }
 }
