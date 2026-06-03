@@ -11,19 +11,14 @@ Start-Process -FilePath "D:\Кайран\backend-go\kayran-server.exe" -WindowSt
 Get-Process -Name kayran-server | Stop-Process -Force
 ```
 
-## Сборка фронтенда (Angular)
+## Полная сборка (фронт → embed → Go)
 ```powershell
-cd D:\Кайран\frontend-angular; ng build
+D:\Кайран\build.ps1
 ```
 
-## Сборка Go-бекенда
+## Полный рестарт (сборка + запуск сервера)
 ```powershell
-cd D:\Кайран\backend-go; go build -ldflags="-s -w" -o kayran-server.exe .
-```
-
-## Полный рестарт (сборка + запуск)
-```powershell
-cd D:\Кайран\frontend-angular; ng build; if ($?) { cd D:\Кайран\backend-go; go build -ldflags="-s -w" -o kayran-server.exe .; if ($?) { Get-Process -Name kayran-server -ErrorAction SilentlyContinue | Stop-Process -Force; Start-Sleep -Seconds 2; $env:DATABASE_URL="postgres://postgres:123@localhost:5432/kayran?sslmode=disable"; Start-Process -FilePath "D:\Кайран\backend-go\kayran-server.exe" -WindowStyle Hidden; echo "OK" } }
+D:\Кайран\build.ps1; if ($?) { Get-Process -Name kayran-server -ErrorAction SilentlyContinue | Stop-Process -Force; Start-Sleep -Seconds 2; $env:DATABASE_URL="postgres://postgres:123@localhost:5432/kayran?sslmode=disable"; Start-Process -FilePath "D:\Кайран\backend-go\kayran-server.exe" -WindowStyle Hidden; echo "OK" }
 ```
 
 ## Проверка БД (PostgreSQL)
@@ -44,6 +39,7 @@ $env:PGPASSWORD='123'
 ## Сайт
 - http://localhost:8000 — фронтенд
 - http://localhost:8000/docs — Swagger API (Go не имеет встроенного Swagger)
+- `https://kayran.fly.dev` — после деплоя на Fly.io (из любой сети)
 
 ## Тестовые пользователи (логин по телефону)
 | Телефон | Имя | Роль |
@@ -81,6 +77,15 @@ $env:Path = "$env:USERPROFILE\.cargo\bin;$env:Path"
 cd D:\Кайран\gps-wasm
 cargo build --target wasm32-unknown-unknown --release
 Copy-Item target\wasm32-unknown-unknown\release\gps_wasm.wasm ..\frontend-angular\src\assets\wasm\gps_ops.wasm
+```
+
+## Деплой на Fly.io (бесплатно, 3×256MB, не спит)
+```powershell
+& "$env:USERPROFILE\.fly\bin\flyctl.exe" apps create kayran
+& "$env:USERPROFILE\.fly\bin\flyctl.exe" postgres create --name kayran-db --region ams --initial-cluster-size 1 --vm-size shared-cpu-1x --volume-size 1
+# скопировать DATABASE_URL из вывода ↑
+& "$env:USERPROFILE\.fly\bin\flyctl.exe" secrets set DATABASE_URL="postgres://..." JWT_SECRET="kayran-secret-key-2026"
+& "$env:USERPROFILE\.fly\bin\flyctl.exe" deploy
 ```
 
 ## Структура проекта
