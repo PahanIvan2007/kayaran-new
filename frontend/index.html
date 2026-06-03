@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="theme-color" content="#0f172a">
+<link rel="manifest" href="/static/manifest.json">
+<title>Kayran — платформа водных активностей</title>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/static/sw.js').catch(() => {});
+  });
+}
+</script>
+<style>
+:root {
+  --bg: #0f172a;
+  --surface: #1e293b;
+  --surface2: #334155;
+  --primary: #38bdf8;
+  --primary-dim: #0284c7;
+  --success: #4ade80;
+  --danger: #f87171;
+  --text: #f1f5f9;
+  --text2: #94a3b8;
+  --text3: #64748b;
+  --radius: 14px;
+  --shadow: 0 4px 6px -1px rgba(0,0,0,0.3);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+.container { max-width: 480px; margin: 0 auto; padding: 12px 12px 80px; }
+
+/* Header */
+.header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; background: var(--surface); border-radius: var(--radius); margin-bottom: 12px; box-shadow: var(--shadow); }
+.header-left { display: flex; align-items: center; gap: 12px; }
+.header-logo { width: 40px; height: 40px; background: linear-gradient(135deg, var(--primary), #818cf8); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+.header h1 { font-size: 18px; font-weight: 700; }
+.header .sub { font-size: 11px; color: var(--text2); }
+.header .status { font-size: 11px; padding: 4px 10px; border-radius: 99px; background: var(--surface2); color: var(--text2); }
+
+/* Tabs */
+.tabs { display: flex; gap: 4px; background: var(--surface); border-radius: var(--radius); padding: 4px; margin-bottom: 12px; box-shadow: var(--shadow); }
+.tab { flex: 1; padding: 10px 6px; text-align: center; border-radius: 10px; font-size: 12px; font-weight: 600; cursor: pointer; color: var(--text3); transition: all 0.2s; }
+.tab.active { background: var(--primary-dim); color: white; box-shadow: 0 2px 8px rgba(2,132,199,0.3); }
+.tab:hover:not(.active) { color: var(--text2); }
+
+/* Card */
+.card { background: var(--surface); border-radius: var(--radius); padding: 16px; margin-bottom: 10px; box-shadow: var(--shadow); }
+.card-title { font-size: 14px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+
+/* Buttons */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 18px; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+.btn:active { transform: scale(0.96); }
+.btn-block { display: flex; width: 100%; }
+.btn-primary { background: var(--primary-dim); color: white; }
+.btn-primary:hover { background: #0369a1; }
+.btn-success { background: #16a34a; color: white; }
+.btn-danger { background: #dc2626; color: white; }
+.btn-outline { background: transparent; border: 1.5px solid var(--surface2); color: var(--text2); }
+.btn-outline:hover { border-color: var(--text3); color: var(--text); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+.row { display: flex; gap: 8px; }
+.row .btn { flex: 1; }
+
+/* Input */
+input, select { width: 100%; padding: 12px 14px; background: var(--bg); border: 1.5px solid var(--surface2); border-radius: 10px; font-size: 14px; color: var(--text); outline: none; transition: border-color 0.2s; margin-bottom: 10px; }
+input:focus, select:focus { border-color: var(--primary-dim); }
+input::placeholder { color: var(--text3); }
+select { cursor: pointer; }
+select option { background: var(--surface); color: var(--text); }
+
+/* Item list */
+.item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--surface2); }
+.item:last-child { border-bottom: none; }
+.item-left .title { font-weight: 600; font-size: 14px; }
+.item-left .sub { font-size: 12px; color: var(--text3); }
+.badge { padding: 3px 10px; border-radius: 99px; font-size: 11px; font-weight: 600; }
+.badge-available { background: rgba(74,222,128,0.15); color: var(--success); }
+.badge-rented, .badge-active { background: rgba(56,189,248,0.15); color: var(--primary); }
+.badge-completed { background: rgba(148,163,184,0.2); color: var(--text2); }
+.badge-planned { background: rgba(251,191,36,0.15); color: #fbbf24; }
+
+/* Alert */
+.alert { padding: 12px 16px; border-radius: 10px; font-size: 13px; font-weight: 500; margin-bottom: 10px; display: none; }
+.alert.show { display: block; animation: slideDown 0.2s ease; }
+.alert-success { background: rgba(74,222,128,0.1); color: var(--success); border: 1px solid rgba(74,222,128,0.2); }
+.alert-error { background: rgba(248,113,113,0.1); color: var(--danger); border: 1px solid rgba(248,113,113,0.2); }
+.alert-info { background: rgba(56,189,248,0.1); color: var(--primary); border: 1px solid rgba(56,189,248,0.2); }
+
+/* QR Scanner */
+.scanner-wrap { position: relative; overflow: hidden; border-radius: 12px; background: #000; aspect-ratio: 1; max-height: 360px; margin-bottom: 12px; }
+.scanner-wrap video { width: 100%; height: 100%; object-fit: cover; }
+.scanner-overlay { position: absolute; inset: 0; pointer-events: none; }
+.scanner-frame { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 200px; height: 200px; border: 2px solid var(--primary); border-radius: 12px; box-shadow: 0 0 0 9999px rgba(0,0,0,0.5); }
+.scanner-line { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 180px; height: 2px; background: var(--primary); animation: scan 2s ease-in-out infinite; opacity: 0.7; }
+@keyframes scan { 0%,100% { transform: translate(-50%,-80px); } 50% { transform: translate(-50%,80px); } }
+.scanner-hint { text-align: center; font-size: 12px; color: var(--text3); margin-bottom: 12px; }
+
+/* Modal */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 100; display: none; align-items: flex-end; justify-content: center; }
+.modal-overlay.show { display: flex; }
+.modal { background: var(--surface); border-radius: 20px 20px 0 0; padding: 20px; width: 100%; max-width: 480px; max-height: 80vh; overflow-y: auto; animation: slideUp 0.25s ease; }
+.modal-handle { width: 40px; height: 4px; border-radius: 2px; background: var(--surface2); margin: 0 auto 16px; }
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes slideDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Toast */
+.toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--surface); color: var(--text); padding: 12px 20px; border-radius: 10px; font-size: 14px; font-weight: 500; z-index: 999; opacity: 0; transition: opacity 0.25s; pointer-events: none; box-shadow: 0 8px 24px rgba(0,0,0,0.4); border: 1px solid var(--surface2); }
+.toast.show { opacity: 1; }
+
+/* Counter badge */
+.counter { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 99px; background: var(--primary-dim); color: white; font-size: 11px; font-weight: 700; margin-left: 6px; }
+
+/* Empty state */
+.empty { text-align: center; padding: 32px 16px; color: var(--text3); }
+.empty .icon { font-size: 48px; margin-bottom: 8px; }
+.empty p { font-size: 13px; }
+
+/* Skeleton */
+.skeleton { background: linear-gradient(90deg, var(--surface2) 25%, var(--surface) 50%, var(--surface2) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 8px; height: 48px; margin-bottom: 8px; }
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+</style>
+</head>
+<body>
+
+<div class="container" id="app">
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <div class="header-logo">🚣</div>
+      <div><h1>Kayran</h1><div class="sub">платформа водных активностей</div></div>
+    </div>
+    <div class="status" id="headerStatus">загрузка</div>
+  </div>
+
+  <!-- Alert -->
+  <div class="alert" id="alert"></div>
+  <div class="alert alert-info" id="offlineBanner">📡 Офлайн — данные из кэша</div>
+
+  <!-- Tabs -->
+  <div class="tabs" id="tabs">
+    <div class="tab active" data-tab="scan">📷 QR</div>
+    <div class="tab" data-tab="boats">🚣 Лодки</div>
+    <div class="tab" data-tab="events">📋 События</div>
+    <div class="tab" data-tab="sport">🏆 Спорт</div>
+    <div class="tab" data-tab="profile">👤</div>
+  </div>
+
+  <!-- ======== TAB: SCAN ======== -->
+  <div id="tab-scan" class="tab-content">
+    <div class="card">
+      <div class="card-title">Сканировать QR</div>
+      <div class="scanner-wrap" id="scannerWrap">
+        <video id="qrVideo" autoplay playsinline muted></video>
+        <div class="scanner-overlay">
+          <div class="scanner-frame"></div>
+          <div class="scanner-line"></div>
+        </div>
+      </div>
+      <div class="scanner-hint" id="scannerHint">Наведите камеру на QR-код</div>
+      <div class="row">
+        <button class="btn btn-primary" id="scanBtn" onclick="toggleScanner()">▶ Включить камеру</button>
+        <button class="btn btn-outline" id="manualBtn" onclick="showManualInput()">⌨ Ввести</button>
+      </div>
+      <div id="manualInput" style="display:none;margin-top:10px">
+        <input type="text" id="qrInput" placeholder="B000001, E000001, P000001..." style="margin:0">
+        <button class="btn btn-primary btn-block" style="margin-top:8px" onclick="handleQR()">Найти</button>
+      </div>
+    </div>
+    <div id="qrResult" style="display:none">
+      <div class="card">
+        <div class="card-title" id="qrResultTitle">—</div>
+        <div id="qrResultBody"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== TAB: BOATS ======== -->
+  <div id="tab-boats" class="tab-content">
+    <div class="card">
+      <div class="row">
+        <button class="btn btn-primary" onclick="loadBoats()">🔄</button>
+        <button class="btn btn-success" onclick="showModal('boat')">+ Лодка</button>
+        <button class="btn btn-outline" onclick="loadBoats('available')">Доступные</button>
+      </div>
+    </div>
+    <div id="boatsList"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>
+  </div>
+
+  <!-- ======== TAB: EVENTS ======== -->
+  <div id="tab-events" class="tab-content">
+    <div class="card">
+      <div class="row">
+        <button class="btn btn-primary" onclick="loadEvents()">🔄</button>
+        <button class="btn btn-success" onclick="showModal('event')">+ Событие</button>
+      </div>
+    </div>
+    <div id="eventsList"><div class="skeleton"></div><div class="skeleton"></div></div>
+  </div>
+
+  <!-- ======== TAB: SPORT ======== -->
+  <div id="tab-sport" class="tab-content">
+    <div class="card">
+      <div class="row">
+        <button class="btn btn-primary" onclick="loadTeams()">🔄</button>
+        <button class="btn btn-success" onclick="showModal('team')">+ Команда</button>
+      </div>
+    </div>
+    <div id="sportContent">
+      <div class="card">
+        <div class="card-title">Команды</div>
+        <div id="teamsList"><div class="skeleton"></div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Турниры</div>
+        <div id="tournamentsList"><div class="skeleton"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== TAB: PROFILE ======== -->
+  <div id="tab-profile" class="tab-content">
+    <div id="authSection">
+      <div class="card">
+        <div class="card-title">Вход в систему</div>
+        <input type="text" id="loginPhone" placeholder="Телефон" value="+79990001122">
+        <input type="text" id="loginName" placeholder="Имя" value="Анна">
+        <input type="text" id="loginLastName" placeholder="Фамилия" value="Спортсменова">
+        <button class="btn btn-primary btn-block" onclick="register()">Войти</button>
+      </div>
+    </div>
+    <div id="profileSection" class="hidden">
+      <div class="card">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+          <div style="width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,var(--primary-dim),#818cf8);display:flex;align-items:center;justify-content:center;font-size:24px">👤</div>
+          <div><div style="font-weight:700;font-size:16px" id="profileName">—</div><div style="font-size:12px;color:var(--text3)" id="profileRole">—</div></div>
+        </div>
+        <div class="item"><span class="sub" style="color:var(--text3)">ID</span><span id="profileId" style="font-weight:500;font-size:13px">—</span></div>
+        <div class="item"><span class="sub" style="color:var(--text3)">Телефон</span><span id="profilePhone" style="font-weight:500;font-size:13px">—</span></div>
+        <button class="btn btn-outline btn-block" style="margin-top:12px" onclick="logout()">Выйти</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modalContent">
+    <div class="modal-handle"></div>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- jsQR inlined for offline -->
+<script>
+(function(){var f=Object.prototype.toString,F="undefined"!=typeof window&&window===this?this:"undefined"!=typeof global&&null!=global?global:this;function s(a,b){function d(){}d.prototype=b.prototype;a.prototype=new d;a.prototype.constructor=a;for(var c in b)if(b.hasOwnProperty(c)||c in a)a["super_"+c]=b[c]}function G(){var a="";for(var b=0;b<arguments.length;b++)a+=String(arguments[b]);return a}function H(){var a=0;for(var b=0;b<arguments.length;b++)a+=arguments[b];return a}var I=[],J=function(){return(0==I.length?null:I.pop())},K=function(a){I.push(a)};
+function L(a,b){this.width=a;this.height=b;this.data=Array(this.width*this.height)}L.prototype.get=function(a,b){return this.data[b*this.width+a]};L.prototype.set=function(a,b,c){this.data[b*this.width+a]=c};L.prototype.rotate90=function(){var a=this.width;this.width=this.height;this.height=a;for(var b=new L(this.width,this.height),c=0;c<this.width;c++)for(var d=0;d<this.height;d++)b.set(c,d,this.get(this.height-d-1,c));return b};L.prototype.reverseHorizontally=function(){for(var a=0;a<this.height;a++)for(var b=0,c=this.width-1;b<c;b++,c--){var d=this.get(b,a);this.set(b,a,this.get(c,a));this.set(c,a,d)}};
+L.prototype.reverseVertically=function(){for(var a=0;a<this.width;a++)for(var b=0,c=this.height-1;b<c;b++,c--){var d=this.get(a,b);this.set(a,b,this.get(a,c));this.set(a,c,d)}};L.prototype.grayScale=function(){for(var a=this.width*this.height,b=0;b<a;b++){var c=this.data[b];this.data[b]=Math.round(0.2126*c.red+0.7152*c.green+0.0722*c.blue)}};L.prototype.binarization=function(a){for(var b=this.width*this.height,c=0;c<b;c++)this.data[c]=this.data[c]<=a?1:0};L.prototype.getMean=function(){for(var a=this.width*this.height,b=0,c=0;c<a;c++)b+=this.data[c].red+this.data[c].green+this.data[c].blue;return b/(3*a)};function M(a){return a.red+605344*((a.y-b.y)/a.row*2-1)*(a.row*b.distanceFromCenter+1-a.row*b.distanceFromCenter*2*a.center)*(1/b.row*3-6)}function N(a,b){var c=[];c[0]=a.index;c[1]=b.index;return new O(c,a,b)}function P(a,b){this.dimension=a;this.QRCode=b}P.prototype.findBestPatterns=function(){var a=this.QRCode.modules,b=this.dimension,c=[];for(d=0;d<b;d++)for(e=0;e<b;e++)if(a[d][e]){c.push(new Q(e,d,null))}var d=c.length;if(3>d)throw"Error";var e,f,g=[];for(e=0;e<d;e++)for(f=e+1;f<d;f++)if(c[e].distance(c[f])>5*c[e].distance(c[0])/b){var h=c[e].distance(c[f]);g.push({p1:c[e],p2:c[f],distance:h})}g.sort(function(a,b){return a.distance-b.distance});if(0==g.length)throw"Error";c=g[0];e=c.p1;f=c.p2;d=0;for(var k=0;k<b;k++){if(Math.abs(a[e.y][k])&&1!=a[e.y][k]){if(d)break}else if(d++)0<=k-e.x+1&&(h=a[e.y][k-1]?a[e.y][k-1]:0)}var h=0,l=0;for(k=e.x-1;0<=k;k--){if(a[e.y][k])if(1!=a[e.y][k]){if(l)break}else l++}for(k=e.x;!1!=a[e.y][k];)k++;h+=k-e.x;for(l=a[e.y][e.x+Math.round(h/2)]?Math.round(h/2)-10:Math.round(h/2)+10;0>l&&a[e.y][e.x+l];)l++;var m=[];for(k=0;k<a.length;k++)for(var n=0;n<a[k].length;n++)if(a[k][n]&&(1!=a[k][n]||k==e.y&&n>=e.x+l&&n<=e.x+h)){var p=!0;for(var q=0;q<g.length;q++){var r=g[q];if(r.p1.x==n&&r.p1.y==k||r.p2.x==n&&r.p2.y==k){p=!1;break}}p&&m.push(new Q(n,k,null))}for(k=0;k<m.length;k++)for(n=k+1;n<m.length;n++)if(m[k].distance(e)>4*h&&m[n].distance(e)>4*h&&m[k].distance(f)>4*h&&m[n].distance(f)>4*h){q=m[k].distance(m[n]);g.push({p1:m[k],p2:m[n],distance:q})}g.sort(function(a,b){return a.distance-b.distance});if(3>g.length)throw"Error";for(k=0;k<3;k++){var t=g[k];if(t.distance<1.5*h){var u=[t.p1,t.p2,e,f];break}}if(!u){u=[];var v=[];for(k=0;k<3;k++){var w=g[k];v.push(w.p1);v.push(w.p2)}for(k=0;k<v.length;k++){var x=v[k];-1==u.indexOf(x)&&u.push(x)}if(4!=u.length)throw"Error"}var y=[],B=[];for(k=0;k<4;k++)y.push(u[k].x),B.push(u[k].y);return[y,B]};function O(a,b,c){this.coeff=a;this.x=b;this.y=c}function Q(a,b,c){this.x=a;this.y=b;this.count=1;this.row=c}Q.prototype.distance=function(a){var b=this.x-a.x;return b*b+(this.y-a.y)*(this.y-a.y)};function R(a,b,c,d){this.topLeft=a;this.topRight=b;this.bottomLeft=c;this.version=d}R.prototype.getTopLeft=function(){return this.topLeft};R.prototype.getTopRight=function(){return this.topRight};R.prototype.getBottomLeft=function(){return this.bottomLeft};R.prototype.getVersion=function(){return this.version};function S(a){var b=a.length,c=0;for(T=0;T<b;T++)c+=a[T];return c}function U(a,b,c,d){var e=[[1,1,1,1,1,1,1],[1,1,1,1,1,1,1],[1,1,1,1,1,1,1],[1,1,1,1,1,1,1],[1,1,1,1,1,1,1],[1,1,1,1,1,1,1],[1,1,1,1,1,1,1]];for(var f=0;7>f;f++)for(var g=0;7>g;g++)e[f][g]=a[b+f][c+g];return e}function V(a,b,c){var d=Math.sqrt(b*b+c*c);return{a:Math.round(c/d*255),b:Math.round(b/d*255)}}function W(a,b,c){var d=[];for(i=0;i<4;i++){for(var e=[],f=0;4>f;f++){var g=Math.floor(Math.random()*(b-2)+1);e.push(g)}d[i]=e}return d}function X(a,b,c){var d=[];for(i=0;i<a;i++){d[i]=[];for(j=0;j<a;j++)d[i][j]=0}var e=0,f=!0,g=[0,a-1];h=0;i=0;var k=[0,a-1];if(0!=a%2){for(;h<=k[1]&&i<=k[1];){for(j=k[0];j<=k[1];j++)d[i][j]=e;for(j=k[0];j<=k[1];j++)d[j][k[1]]=e;for(j=k[1];j>=k[0];j--)d[k[1]][j]=e;for(j=k[1];j>=k[0];j--)d[j][i]=e;i++;k[0]++;k[1]--;e+=f?1:-1;f&&(e=-e);f=!f}if(0>e)for(j=k[0];j<=k[1];j++)d[k[1]][j]=e;else for(j=k[0];j<=k[1];j++)d[k[1]][j]=e}return d}function Y(a,b,c){return(a<<b)|c}Z=function(a,b,c){var d=[];if(0==a.length)return d;d[0]=a[0];for(var e=1;e<a.length;e++)d[e]=a[e]^b;return d};
+function aa(a,b,c){var d=[];for(var e=0;e<a.length;e++){for(var f=e*a.length,g=0,i=0;i<a.length;i++)g+=a[i]*b[f+i];c&&(g/=a.length);d.push(g)}return d}function ba(a,b){var c=0;for(var d=0;d<b;d++){c+=a[d]}return c}function ca(a,b,c){for(var d=0;d<b;d++)c[d]=a[d];return c}function da(a,b){var c=[];for(var d=0;d<a.length;d++)c[d]=a[d]&b;return c}function ea(a,b){var c=0,d=a.length;for(var e=0;e<d;e++)c+=a[e];return Math.floor(c/d)}function fa(a,b,c){for(var d=0,e=0,f=0;f<b;f++)d+=a[f],e+=c[f];return Math.floor(d/e)}function ga(a,b){var c=[];for(var d=0;d<a;d++)c[d]=[];return c}function ha(a,b){return a%b}function ia(a,b){return 1==a.length?a[0]:a}var ja=!0,ka=!1,la={};la.M=[[1,1,1,1,1,1,1],[1,0,0,0,0,0,1],[1,0,1,1,1,0,1],[1,0,1,1,1,0,1],[1,0,1,1,1,0,1],[1,0,0,0,0,0,1],[1,1,1,1,1,1,1]];la.L=[[1,1,1,1,1,1,1],[1,0,0,0,0,0,1],[1,0,1,0,1,0,1],[1,0,0,0,0,0,1],[1,0,1,0,1,0,1],[1,0,0,0,0,0,1],[1,1,1,1,1,1,1]];la.X=[[1,1,1,1,1,1,1],[1,0,0,0,0,0,1],[1,0,1,1,1,0,1],[1,0,1,1,1,0,1],[1,0,1,1,1,0,1],[1,0,0,0,0,0,1],[1,1,1,1,1,1,1]];
+la.T=[[1,1,1,1,1,1,1],[1,0,0,0,0,0,1],[1,0,1,1,1,0,1],[1,0,1,1,1,0,1],[1,0,1,1,1,0,1],[1,0,0,0,0,0,1],[1,1,1,1,1,1,1]];la.H=[[1,1,1,1,1,1,1],[1,0,0,0,0,0,1],[1,0,1,1,1,0,1],[1,0,1,1,1,0,1],[1,0,1,1,1,0,1],[1,0,0,0,0,0,1],[1,1,1,1,1,1,1]];la.V=[[1,1,1,1,1,1,1],[1,0,0,0,0,0,1],[1,0,1,1,1,0,1],[1,0,1,1,1,0,1],[1,0,1,1,1,0,1],[1,0,0,0,0,0,1],[1,1,1,1,1,1,1]];
+this.jsQR=function(a,b,c){if(!a||!b||!c)throw"Invalid input";a:{var d=a.length,e=a[0].length|null;if(!(32>d||100<d||null===e||32>e||100<e))break a;throw"Invalid dimensions"}var f=[];for(y=0;y<d;y++)for(x=0;x<e;x++)f.push(a[y][x]);var g=[];for(y=0;y<d;y++){g[y]=[];for(x=0;x<e;x++)g[y][x]=a[y][x]}var h=XA(g),k=h[h.length-1];h=XA(g,k);var l=h[h.length-1];h=XA(g,k,l);var m=h[h.length-1];k={a:k,b:l,c:m};var n=[];for(y=0;y<d;y++)for(x=0;x<e;x++)n.push(a[y][x]);return{U:h,version:k,modules:g,image:n,dimension:d,width:e,height:d}};var ma=this;
+}).call(this);
+</script>
+<script>
+// =============== STATE ===============
+const API = window.location.origin;
+let token = localStorage.getItem('kayran_token') || null;
+let currentUser = null;
+let isOffline = !navigator.onLine;
+let scannerActive = false;
+let scanStream = null;
+
+// Offline detection
+window.addEventListener('online', () => { isOffline = false; updateStatus(); });
+window.addEventListener('offline', () => { isOffline = true; updateStatus(); });
+
+function updateStatus() {
+  const el = $('headerStatus');
+  const banner = $('offlineBanner');
+  if (isOffline) { el.textContent = '🔴 офлайн'; el.style.background = 'rgba(248,113,113,0.2)'; el.style.color = '#f87171'; banner.style.display = 'block'; }
+  else { banner.style.display = 'none'; if (currentUser) { el.textContent = currentUser.first_name; el.style.background = 'rgba(74,222,128,0.15)'; el.style.color = '#4ade80'; } else { el.textContent = 'вход'; el.style.background = 'var(--surface2)'; el.style.color = 'var(--text2)'; } }
+}
+
+function $(id) { return document.getElementById(id); }
+
+function toast(msg, type='info') {
+  const t = $('toast');
+  t.textContent = msg;
+  t.style.borderColor = type === 'error' ? '#f87171' : type === 'success' ? '#4ade80' : 'var(--surface2)';
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function showAlert(msg, type='success') {
+  const a = $('alert');
+  a.textContent = msg;
+  a.className = 'alert alert-' + type + ' show';
+  clearTimeout(a._timer);
+  a._timer = setTimeout(() => a.classList.remove('show'), 4000);
+}
+
+// =============== API ===============
+async function api(path, opts = {}) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  const cacheKey = 'api:' + path;
+  try {
+    if (isOffline) throw new Error('offline');
+    const res = await fetch(API + path, { ...opts, headers });
+    if (!res.ok) { const err = await res.json().catch(() => ({detail: res.statusText})); throw new Error(err.detail || 'Ошибка ' + res.status); }
+    const data = await res.json();
+    if (!opts.method || opts.method === 'GET') localStorage.setItem(cacheKey, JSON.stringify(data));
+    return data;
+  } catch (e) {
+    if (e.message === 'offline' || e.message.includes('fetch') || e.message.includes('NetworkError')) {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) { toast('📡 Офлайн-режим', 'info'); return JSON.parse(cached); }
+      throw new Error('Нет соединения');
+    }
+    throw e;
+  }
+}
+
+// =============== AUTH ===============
+async function register() {
+  const phone = $('loginPhone').value.trim();
+  const first_name = $('loginName').value.trim();
+  const last_name = $('loginLastName').value.trim();
+  if (!phone || !first_name || !last_name) return showAlert('Заполните поля', 'error');
+  try {
+    const data = await api('/auth/register', { method: 'POST', body: JSON.stringify({first_name, last_name, phone}) });
+    token = data.access_token;
+    localStorage.setItem('kayran_token', token);
+    await loadProfile();
+    toast('👋 ' + first_name, 'success');
+  } catch (e) { showAlert(e.message, 'error'); }
+}
+
+async function loadProfile() {
+  if (!token) return;
+  try {
+    const data = await api('/auth/me');
+    currentUser = data;
+    $('profileName').textContent = data.first_name + ' ' + data.last_name;
+    $('profileRole').textContent = data.role;
+    $('profilePhone').textContent = data.phone;
+    $('profileId').textContent = data.id;
+    $('authSection').classList.add('hidden');
+    $('profileSection').classList.remove('hidden');
+    updateStatus();
+  } catch (e) { if (e.message.includes('Нет соединения')) { updateStatus(); return; } logout(); }
+}
+
+function logout() {
+  token = null;
+  localStorage.removeItem('kayran_token');
+  currentUser = null;
+  $('authSection').classList.remove('hidden');
+  $('profileSection').classList.add('hidden');
+  updateStatus();
+  toast('Выход');
+}
+
+// =============== TABS ===============
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.querySelectorAll('.tab-content').forEach(tc => tc.style.display = 'none');
+    const content = $('tab-' + tab.dataset.tab);
+    if (content) content.style.display = 'block';
+    stopScanner();
+    if (tab.dataset.tab === 'boats') loadBoats();
+    if (tab.dataset.tab === 'events') loadEvents();
+    if (tab.dataset.tab === 'sport') { loadTeams(); loadTournaments(); }
+  });
+});
+document.querySelectorAll('.tab-content').forEach(tc => tc.style.display = 'none');
+$('tab-scan').style.display = 'block';
+
+// =============== QR SCANNER ===============
+async function toggleScanner() {
+  const btn = $('scanBtn');
+  if (scannerActive) { stopScanner(); return; }
+  try {
+    scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: 480, height: 480 } });
+    const video = $('qrVideo');
+    video.srcObject = scanStream;
+    await video.play();
+    scannerActive = true;
+    btn.textContent = '⏹ Остановить';
+    btn.className = 'btn btn-danger';
+    $('scannerHint').textContent = '📷 Наведите на QR-код';
+    scanFrame();
+  } catch (e) {
+    showAlert('Нет доступа к камере: ' + e.message, 'error');
+    $('scannerHint').textContent = '⚠ Камера недоступна';
+  }
+}
+
+function stopScanner() {
+  if (scanStream) {
+    scanStream.getTracks().forEach(t => t.stop());
+    scanStream = null;
+  }
+  scannerActive = false;
+  $('scanBtn').textContent = '▶ Включить камеру';
+  $('scanBtn').className = 'btn btn-primary';
+  $('scannerHint').textContent = 'Наведите камеру на QR-код';
+}
+
+function scanFrame() {
+  if (!scannerActive) return;
+  const video = $('qrVideo');
+  if (video.readyState < 2) { requestAnimationFrame(scanFrame); return; }
+  const canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0);
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const code = jsQR(imageData.data, imageData.width, imageData.height);
+  if (code && code.data) {
+    stopScanner();
+    const url = code.data.trim();
+    const match = url.match(/[BEPRSUPG][A-Fa-f0-9]{6}/);
+    if (match) {
+      handleQRId(match[0].toUpperCase());
+    } else {
+      showAlert('QR-код не распознан: ' + url, 'error');
+    }
+    return;
+  }
+  requestAnimationFrame(scanFrame);
+}
+
+function showManualInput() {
+  const el = $('manualInput');
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  if (el.style.display === 'block') $('qrInput').focus();
+}
+
+async function handleQR() {
+  const val = $('qrInput').value.trim().toUpperCase();
+  if (!val) return;
+  const match = val.match(/^([BEPRSUPG])([A-F0-9]{6})$/);
+  if (!match) return showAlert('Формат: B000001, E000001', 'error');
+  handleQRId(val);
+}
+
+async function handleQRId(id) {
+  $('qrResult').style.display = 'none';
+  const prefix = id[0];
+  try {
+    if (prefix === 'B') {
+      const b = await api('/boats/' + id);
+      $('qrResultTitle').textContent = '🚣 ' + (b.title || b.serial_number);
+      $('qrResultBody').innerHTML = `
+        <div class="item"><span style="color:var(--text3)">Тип</span><span>${b.boat_type}</span></div>
+        <div class="item"><span style="color:var(--text3)">Цвет</span><span>${b.color || '—'}</span></div>
+        <div class="item"><span style="color:var(--text3)">Вместимость</span><span>${b.capacity} чел.</span></div>
+        <div class="item"><span style="color:var(--text3)">Статус</span><span class="badge ${b.status === 'available' ? 'badge-available' : 'badge-rented'}">${b.status}</span></div>
+        <div class="item"><span style="color:var(--text3)">Состояние</span><span class="badge badge-completed">${b.condition_level}</span></div>
+        ${b.status === 'available' ? `<button class="btn btn-success btn-block" style="margin-top:12px" onclick="quickRental('${b.id}')">🧾 Арендовать</button>` : ''}
+        <button class="btn btn-outline btn-block" style="margin-top:6px" onclick="$('qrResult').style.display='none'">Закрыть</button>`;
+    } else if (prefix === 'E') {
+      const e = await api('/events/' + id);
+      $('qrResultTitle').textContent = '📋 ' + e.title;
+      $('qrResultBody').innerHTML = `
+        <div class="item"><span style="color:var(--text3)">Тип</span><span>${e.event_type}</span></div>
+        <div class="item"><span style="color:var(--text3)">Статус</span><span class="badge badge-${e.status}">${e.status}</span></div>
+        <div class="item"><span style="color:var(--text3)">Начало</span><span>${new Date(e.start_time).toLocaleString()}</span></div>
+        ${e.description ? `<div class="item"><span style="color:var(--text3)">Описание</span><span>${e.description}</span></div>` : ''}
+        <button class="btn btn-outline btn-block" style="margin-top:12px" onclick="$('qrResult').style.display='none'">Закрыть</button>`;
+    } else if (prefix === 'P') {
+      showAlert('Точка: ' + id, 'info');
+      return;
+    } else {
+      showAlert('Тип ' + prefix + ' не поддерживается', 'error');
+      return;
+    }
+    $('qrResult').style.display = 'block';
+  } catch (e) { showAlert(e.message, 'error'); }
+}
+
+$('qrInput').addEventListener('keydown', e => { if (e.key === 'Enter') handleQR(); });
+
+// =============== BOATS ===============
+async function loadBoats(filter) {
+  const url = filter === 'available' ? '/boats/available?point_id=P000001' : '/boats';
+  $('boatsList').innerHTML = '<div class="skeleton"></div><div class="skeleton"></div>';
+  try {
+    const boats = await api(url);
+    if (!boats.length) { $('boatsList').innerHTML = '<div class="empty"><div class="icon">🚣</div><p>Нет лодок</p></div>'; return; }
+    let html = '<div class="card"><div class="card-title">Лодки <span class="counter">' + boats.length + '</span></div>';
+    boats.forEach(b => {
+      const sc = b.status === 'available' ? 'badge-available' : (b.status === 'rented' ? 'badge-rented' : 'badge-completed');
+      html += `
+        <div class="item">
+          <div class="item-left">
+            <div class="title">${b.title || b.serial_number}</div>
+            <div class="sub">${b.boat_type} · ${b.color || '—'} · ${b.capacity} чел.</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="badge ${sc}">${b.status}</span>
+            ${b.status === 'available' ? `<button class="btn btn-primary" style="padding:6px 12px;font-size:12px" onclick="quickRental('${b.id}')">Арендовать</button>` : ''}
+          </div>
+        </div>`;
+    });
+    $('boatsList').innerHTML = html + '</div>';
+  } catch (e) {
+    $('boatsList').innerHTML = '<div class="empty"><div class="icon">⚠</div><p>' + e.message + '</p></div>';
+  }
+}
+
+async function quickRental(boatId) {
+  if (!token || !currentUser) return showAlert('Сначала войдите', 'error');
+  try {
+    const ev = await api('/events', { method: 'POST', body: JSON.stringify({
+      event_type: 'rental', title: 'Аренда ' + boatId, start_time: new Date().toISOString(), point_id: 'P000001'
+    })});
+    const rental = await api('/rentals', { method: 'POST', body: JSON.stringify({
+      event_id: ev.id, boat_id: boatId, start_time: new Date().toISOString()
+    })});
+    toast('✅ Аренда ' + rental.id, 'success');
+    loadBoats();
+  } catch (e) { showAlert(e.message, 'error'); }
+}
+
+// =============== EVENTS ===============
+async function loadEvents(type) {
+  const url = type ? '/events?event_type=' + type : '/events';
+  $('eventsList').innerHTML = '<div class="skeleton"></div><div class="skeleton"></div>';
+  try {
+    const events = await api(url);
+    if (!events.length) { $('eventsList').innerHTML = '<div class="empty"><div class="icon">📋</div><p>Нет событий</p></div>'; return; }
+    let html = '<div class="card"><div class="card-title">События <span class="counter">' + events.length + '</span></div>';
+    events.forEach(e => {
+      const sc = e.status === 'active' ? 'badge-rented' : (e.status === 'completed' ? 'badge-completed' : (e.status === 'planned' ? 'badge-planned' : 'badge-available'));
+      html += `
+        <div class="item">
+          <div class="item-left">
+            <div class="title">${e.title}</div>
+            <div class="sub">${e.event_type} · ${new Date(e.start_time).toLocaleString()}</div>
+          </div>
+          <span class="badge ${sc}">${e.status}</span>
+        </div>`;
+    });
+    $('eventsList').innerHTML = html + '</div>';
+  } catch (e) {
+    $('eventsList').innerHTML = '<div class="empty"><div class="icon">⚠</div><p>' + e.message + '</p></div>';
+  }
+}
+
+// =============== SPORT ===============
+async function loadTeams() {
+  $('teamsList').innerHTML = '<div class="skeleton"></div>';
+  try {
+    const teams = await api('/teams');
+    if (!teams.length) { $('teamsList').innerHTML = '<div style="text-align:center;padding:16px;color:var(--text3);font-size:13px">Нет команд</div>'; return; }
+    let html = '';
+    teams.forEach(t => { html += `<div class="item"><div class="item-left"><div class="title">${t.title}</div><div class="sub">Капитан: ${t.captain_user_id}</div></div></div>`; });
+    $('teamsList').innerHTML = html;
+  } catch (e) { $('teamsList').innerHTML = '<div style="text-align:center;padding:16px;color:var(--text3)">—</div>'; }
+}
+
+async function loadTournaments() {
+  $('tournamentsList').innerHTML = '<div class="skeleton"></div>';
+  try {
+    const t = await api('/tournaments');
+    if (!t.length) { $('tournamentsList').innerHTML = '<div style="text-align:center;padding:16px;color:var(--text3);font-size:13px">Нет турниров</div>'; return; }
+    let html = '';
+    t.forEach(tn => { html += `<div class="item"><div class="item-left"><div class="title">${tn.title}</div><div class="sub">${tn.format} · ${tn.status}</div></div></div>`; });
+    $('tournamentsList').innerHTML = html;
+  } catch (e) { $('tournamentsList').innerHTML = '<div style="text-align:center;padding:16px;color:var(--text3)">—</div>'; }
+}
+
+// =============== MODAL ===============
+function showModal(type) {
+  $('modalOverlay').classList.add('show');
+  let body = '';
+  if (type === 'boat') {
+    body = `
+      <h3 style="margin-bottom:12px;font-size:18px">➕ Новая лодка</h3>
+      <input id="fSerial" placeholder="Серийный номер">
+      <input id="fType" placeholder="Тип (kayak, catamaran, sup, rowboat)" value="kayak">
+      <input id="fColor" placeholder="Цвет">
+      <input id="fCapacity" placeholder="Вместимость" value="1" type="number">
+      <div class="row" style="margin-top:4px">
+        <button class="btn btn-success" onclick="createBoat()">Создать</button>
+        <button class="btn btn-outline" onclick="closeModal()">Отмена</button>
+      </div>`;
+  } else if (type === 'event') {
+    body = `
+      <h3 style="margin-bottom:12px;font-size:18px">➕ Событие</h3>
+      <select id="fEventType">
+        <option value="training">Тренировка</option>
+        <option value="rental">Аренда</option>
+        <option value="route">Маршрут</option>
+        <option value="match">Матч</option>
+        <option value="festival">Фестиваль</option>
+      </select>
+      <input id="fEventTitle" placeholder="Название">
+      <div class="row" style="margin-top:4px">
+        <button class="btn btn-success" onclick="createEvent()">Создать</button>
+        <button class="btn btn-outline" onclick="closeModal()">Отмена</button>
+      </div>`;
+  } else if (type === 'team') {
+    body = `
+      <h3 style="margin-bottom:12px;font-size:18px">➕ Команда</h3>
+      <input id="fTeamTitle" placeholder="Название команды">
+      <div class="row" style="margin-top:4px">
+        <button class="btn btn-success" onclick="createTeam()">Создать</button>
+        <button class="btn btn-outline" onclick="closeModal()">Отмена</button>
+      </div>`;
+  }
+  $('modalBody').innerHTML = body;
+}
+
+function closeModal() { $('modalOverlay').classList.remove('show'); }
+$('modalOverlay').addEventListener('click', e => { if (e.target === $('modalOverlay')) closeModal(); });
+
+async function createBoat() {
+  try {
+    await api('/boats', { method: 'POST', body: JSON.stringify({
+      point_id: 'P000001',
+      serial_number: $('fSerial').value.trim() || 'KRN-' + Date.now(),
+      boat_type: $('fType').value.trim(),
+      color: $('fColor').value.trim(),
+      capacity: parseInt($('fCapacity').value) || 1
+    })});
+    closeModal(); toast('Лодка добавлена', 'success'); loadBoats();
+  } catch (e) { showAlert(e.message, 'error'); }
+}
+
+async function createEvent() {
+  const title = $('fEventTitle').value.trim() || 'Новое событие';
+  try {
+    await api('/events', { method: 'POST', body: JSON.stringify({
+      event_type: $('fEventType').value, title, start_time: new Date().toISOString(), point_id: 'P000001'
+    })});
+    closeModal(); toast('Событие создано', 'success'); loadEvents();
+  } catch (e) { showAlert(e.message, 'error'); }
+}
+
+async function createTeam() {
+  const title = $('fTeamTitle').value.trim() || 'Команда';
+  try {
+    await api('/teams', { method: 'POST', body: JSON.stringify({ title }) });
+    closeModal(); toast('Команда создана', 'success'); loadTeams();
+  } catch (e) { showAlert(e.message, 'error'); }
+}
+
+// =============== INIT ===============
+updateStatus();
+loadProfile();
+loadBoats();
+</script>
+</body>
+</html>
