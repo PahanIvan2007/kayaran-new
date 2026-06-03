@@ -6,6 +6,13 @@ import type { User, AuthResponse } from '../models/models';
 export class AuthService {
   constructor(private api: ApiService) {}
 
+  async login(phone: string): Promise<User> {
+    const data = await this.api.post<AuthResponse>('/auth/login', { phone });
+    this.api.setToken(data.access_token);
+    this.api.currentUser.set(data.user);
+    return data.user;
+  }
+
   async register(first_name: string, last_name: string, phone: string): Promise<User> {
     const data = await this.api.post<AuthResponse>('/auth/register', { first_name, last_name, phone });
     this.api.setToken(data.access_token);

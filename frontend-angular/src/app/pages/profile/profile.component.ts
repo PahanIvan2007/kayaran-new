@@ -153,9 +153,13 @@ export class ProfileComponent implements OnInit {
     if (this.loginForm.invalid) return;
     const { phone, firstName, lastName } = this.loginForm.value;
     try {
-      await this.auth.register(firstName!, lastName!, phone!);
-      this.loadUsers();
-    } catch (e: any) { alert(e.message); }
+      await this.auth.login(phone!);
+    } catch {
+      try {
+        await this.auth.register(firstName!, lastName!, phone!);
+      } catch (e: any) { alert(e.message); return; }
+    }
+    this.loadUsers();
   }
 
   async loadUsers() {
