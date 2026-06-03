@@ -54,6 +54,18 @@ import type { Boat } from '../../models/models';
       </div>
     }
 
+    @if (showPayment(); as pmt) {
+      <div class="card payment-confirm">
+        <div class="card-title">✅ Оплачено</div>
+        <div style="text-align:center;padding:12px;">
+          <div style="font-size:28px;font-weight:700;color:var(--red-light);font-family:var(--font-display);">{{ pmt.amount }} ₽</div>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:4px;">Платёж #{{ pmt.payment_id }}</div>
+          <div style="font-size:10px;color:var(--text-muted);">Аренда #{{ pmt.rental_id }}</div>
+        </div>
+        <button class="btn btn-primary btn-block" (click)="showPayment.set(null)">OK</button>
+      </div>
+    }
+
     @if (showBooking()) {
       <div class="card" style="border:1px solid rgba(220,38,38,0.1);">
         <div class="card-title">🚣 Бронирование <span style="color:var(--text);font-family:var(--font-body);text-transform:none;letter-spacing:0;">{{ bookingBoat()?.title || bookingBoat()?.serial_number }}</span></div>
@@ -130,7 +142,7 @@ export class BoatsComponent implements OnInit {
 
   totalPrice() {
     const t = this.tariffs.find(x => x.id === this.selectedTariff());
-    return t ? t.price : 1500;
+    return (t ? t.price : 1500) * parseInt(this.duration());
   }
 
   ngOnInit() { this.loadBoats(); }
@@ -160,12 +172,16 @@ export class BoatsComponent implements OnInit {
     this.bookingBoat.set(null);
   }
 
+  showPayment = signal<{ amount: number; rental_id: string; payment_id: string } | null>(null);
+
   async confirmBooking() {
     const boat = this.bookingBoat();
     if (!boat) return;
     const tariff = this.tariffs.find(t => t.id === this.selectedTariff());
     const st = this.startTime();
     if (!st) { alert('Выберите дату и время'); return }
+    const dur = parseInt(this.duration());
+    const amount = (tariff?.price || 1500) * dur;
     try {
       const ev = await this.api.post<any>('/events', {
         event_type: 'rental',
@@ -173,11 +189,14 @@ export class BoatsComponent implements OnInit {
         start_time: new Date(st).toISOString(),
         point_id: boat.point_id || 'P000001',
       });
-      await this.api.post<any>('/rentals', {
+      const rental = await this.api.post<any>('/rentals', {
         event_id: ev.id,
         boat_id: boat.id,
         start_time: new Date(st).toISOString(),
+        amount: amount,
+        tariff_id: tariff?.id || 'standard',
       });
+      this.showPayment.set({ amount, rental_id: rental.id, payment_id: rental.payment_id });
       this.closeBooking();
       this.loadBoats();
     } catch (e: any) {

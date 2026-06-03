@@ -99,15 +99,15 @@ import type { Team, Tournament, Match } from '../../models/models';
               } @else {
                 <div class="bracket-round">
                   <div class="bracket-round-title">🗓 Матчи турнира</div>
-                  @for (m of tournamentMatches(); track m.id) {
+                      @for (m of tournamentMatches(); track m.id) {
                     <div class="match-card">
                       <div class="match-teams">
-                        <span>{{ m.team1_id || '—' }}</span>
+                        <span>{{ m.team_a_id || '—' }}</span>
                         <span class="match-vs">vs</span>
-                        <span>{{ m.team2_id || '—' }}</span>
+                        <span>{{ m.team_b_id || '—' }}</span>
                       </div>
                       <div class="match-score">
-                        {{ m.score_team1 ?? '?' }}:{{ m.score_team2 ?? '?' }}
+                        {{ m.score_a }}{{ ':' }}{{ m.score_b }}
                       </div>
                     </div>
                   }

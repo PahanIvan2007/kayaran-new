@@ -42,21 +42,17 @@ export interface Tournament {
   readonly title: string;
   readonly format: string;
   readonly status: string;
-  readonly start_time?: string;
-  readonly end_time?: string;
 }
 
 export interface Match {
   readonly id: string;
   readonly tournament_id: string;
   readonly round: number;
-  readonly position: number;
-  readonly team1_id?: string;
-  readonly team2_id?: string;
-  readonly score_team1?: number;
-  readonly score_team2?: number;
+  readonly team_a_id: string;
+  readonly team_b_id: string;
+  readonly score_a: number;
+  readonly score_b: number;
   readonly status: string;
-  readonly start_time?: string;
 }
 
 export interface Rental {

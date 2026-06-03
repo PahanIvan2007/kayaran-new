@@ -14,9 +14,11 @@ func (h *Handler) CreateRental(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	uid := middleware.GetUserID(r)
 	var req struct {
-		EventID   string `json:"event_id"`
-		BoatID    string `json:"boat_id"`
-		StartTime string `json:"start_time"`
+		EventID   string  `json:"event_id"`
+		BoatID    string  `json:"boat_id"`
+		StartTime string  `json:"start_time"`
+		Amount    float64 `json:"amount"`
+		TariffID  string  `json:"tariff_id"`
 	}
 	json.NewDecoder(r.Body).Decode(&req)
 	st, _ := time.Parse(time.RFC3339, req.StartTime)
@@ -33,7 +35,19 @@ func (h *Handler) CreateRental(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.db.Exec(r.Context(), `UPDATE boats SET status='rented' WHERE id=$1`, req.BoatID)
-	jsonOK(w, map[string]string{"id": id, "status": "active"})
+	// Create payment record
+	paymentID := ""
+	if req.Amount > 0 {
+		h.db.QueryRow(r.Context(),
+			`INSERT INTO payments (event_id, user_id, amount, payment_status)
+			 VALUES ($1,$2,$3,'completed') RETURNING id`,
+			req.EventID, uid, req.Amount,
+		).Scan(&paymentID)
+	}
+	jsonOK(w, map[string]any{
+		"id": id, "status": "active",
+		"amount": req.Amount, "payment_id": paymentID,
+	})
 }
 
 func (h *Handler) ReturnRental(w http.ResponseWriter, r *http.Request) {

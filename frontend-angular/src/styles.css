@@ -1338,3 +1338,98 @@ textarea { resize: vertical; min-height: 48px; }
 @media (min-width: 481px) {
   .form-row { gap: 10px; }
 }
+
+/* ===== MOBILE ADAPTATION (phones) ===== */
+@media (max-width: 480px) {
+  :root {
+    --container-w: 100%;
+    --radius: 14px;
+    --radius-sm: 8px;
+    --header-h: 56px;
+    --tab-h: 48px;
+  }
+
+  body { font-size: 15px; }
+
+  .header { padding: 10px 12px; }
+  .header-logo { font-size: 16px; }
+  .header-user { font-size: 9px; }
+
+  .container { padding: 8px; }
+  .card { padding: 10px; border-radius: var(--radius-sm); }
+  .card-title { font-size: 10px; margin-bottom: 6px; }
+
+  .tabs { gap: 2px; padding: 4px 6px 0; overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: nowrap; justify-content: flex-start; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab { max-width: none; white-space: nowrap; font-size: 9px; padding: 8px 10px; flex-shrink: 0; }
+
+  .row { gap: 4px; flex-wrap: wrap; }
+  .btn { font-size: 10px; padding: 8px 14px; min-height: 36px; }
+  .btn-block { width: 100%; }
+
+  .boat-grid { grid-template-columns: 1fr; gap: 6px; }
+  .boat-card { flex-direction: row; align-items: center; gap: 8px; }
+  .boat-qr { width: 60px; }
+  .boat-qr app-qr { transform: scale(0.7); transform-origin: top left; display: block; }
+  .boat-id { font-size: 8px; }
+  .boat-info { flex: 1; }
+  .boat-title { font-size: 12px; }
+  .boat-meta { flex-wrap: wrap; gap: 2px; }
+  .boat-tag { font-size: 8px; padding: 1px 5px; }
+  .boat-status-row { flex-direction: column; gap: 3px; align-items: flex-start; }
+  .boat-stars { font-size: 9px; }
+
+  .stats-grid { grid-template-columns: 1fr 1fr; gap: 6px; }
+  .stat-item { padding: 6px 8px; }
+  .stat-value { font-size: 13px; }
+
+  .quick-actions { grid-template-columns: 1fr 1fr; gap: 6px; }
+  .quick-action { padding: 8px; font-size: 9px; }
+
+  .item { padding: 6px 0; gap: 4px; }
+  .item-left .title { font-size: 12px; }
+  .item-left .sub { font-size: 8px; }
+  .actions { gap: 2px; }
+  .btn-xs { padding: 3px 6px; font-size: 9px; }
+
+  .hero { padding: 16px 12px; }
+  .hero h1 { font-size: 18px; }
+  .hero p { font-size: 10px; }
+
+  .event-card { flex-direction: column; align-items: flex-start; gap: 4px; }
+
+  .skeleton { height: 32px; }
+
+  .bracket-round { padding: 4px 0; }
+  .match-card { flex-direction: column; align-items: flex-start; gap: 2px; padding: 4px 6px; }
+  .match-teams { font-size: 10px; gap: 4px; }
+  .match-score { font-size: 12px; }
+
+  .rental-actions { flex-direction: column; gap: 4px; }
+
+  .gps-coord { font-size: 10px; }
+  .gps-status { font-size: 10px; }
+
+  .form-row { flex-direction: column; gap: 6px; }
+  input, select, textarea { font-size: 14px; padding: 8px 10px; }
+
+  .badge { font-size: 8px; padding: 1px 6px; }
+
+  .payment-confirm .card-title { font-size: 12px; }
+
+  .tab-bar-label { display: none; }
+  .tab-bar-icon { font-size: 18px; }
+
+  .hero-stats { flex-direction: column; gap: 4px; }
+  .hero-stat { padding: 6px 10px; }
+  .hero-stat-value { font-size: 16px; }
+  .hero-stat-label { font-size: 8px; }
+}
+
+/* Small phones */
+@media (max-width: 360px) {
+  .header-logo { font-size: 14px; }
+  .tab { font-size: 8px; padding: 6px 8px; }
+  .btn { font-size: 9px; padding: 6px 10px; }
+  .stats-grid { grid-template-columns: 1fr; }
+}

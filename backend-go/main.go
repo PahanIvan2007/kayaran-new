@@ -97,16 +97,23 @@ func main() {
 		r.Use(mw.Auth)
 		r.Get("/", h.ListTeams)
 		r.Post("/", h.CreateTeam)
+		r.Get("/{id}", h.GetTeam)
+		r.Put("/{id}", h.UpdateTeam)
+		r.Delete("/{id}", h.DeleteTeam)
 	})
 
 	r.Route("/tournaments", func(r chi.Router) {
 		r.Use(mw.Auth)
 		r.Get("/", h.ListTournaments)
 		r.Post("/", h.CreateTournament)
+		r.Get("/{id}", h.GetTournament)
+		r.Put("/{id}", h.UpdateTournament)
+		r.Delete("/{id}", h.DeleteTournament)
 	})
 
 	r.Route("/matches", func(r chi.Router) {
 		r.Use(mw.Auth)
+		r.Get("/", h.ListMatches)
 		r.Post("/", h.CreateMatch)
 		r.Put("/{id}/score", h.SetScore)
 	})

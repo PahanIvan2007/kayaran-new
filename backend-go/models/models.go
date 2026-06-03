@@ -54,23 +54,21 @@ type Team struct {
 }
 
 type Tournament struct {
-	ID        string     `json:"id"`
-	Title     string     `json:"title"`
-	Format    string     `json:"format"`
-	Status    string     `json:"status"`
-	StartTime *time.Time `json:"start_time,omitempty"`
-	EndTime   *time.Time `json:"end_time,omitempty"`
+	ID     string `json:"id"`
+	Title  string `json:"title"`
+	Format string `json:"format"`
+	Status string `json:"status"`
 }
 
 type Match struct {
-	ID           string     `json:"id"`
-	TournamentID string     `json:"tournament_id"`
-	Team1ID      string     `json:"team1_id"`
-	Team2ID      string     `json:"team2_id"`
-	Score1       *int       `json:"score1,omitempty"`
-	Score2       *int       `json:"score2,omitempty"`
-	Status       string     `json:"status"`
-	ScheduledAt  *time.Time `json:"scheduled_at,omitempty"`
+	ID           string `json:"id"`
+	TournamentID string `json:"tournament_id"`
+	TeamAID      string `json:"team_a_id"`
+	TeamBID      string `json:"team_b_id"`
+	ScoreA       int    `json:"score_a"`
+	ScoreB       int    `json:"score_b"`
+	Status       string `json:"status"`
+	Round       int    `json:"round"`
 }
 
 type GpsTrack struct {
