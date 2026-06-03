@@ -9,7 +9,7 @@ import (
 
 func (h *Handler) ListRoutes(w http.ResponseWriter, r *http.Request) {
 	rows, _ := h.db.Query(r.Context(),
-		`SELECT id, title, description, difficulty, distance_km, estimated_minutes, status
+		`SELECT id, title, description, difficulty, distance_km, estimated_duration, status
 		 FROM routes WHERE status!='deleted' ORDER BY title`)
 	defer rows.Close()
 	type Route struct {
@@ -45,7 +45,7 @@ func (h *Handler) GetRoute(w http.ResponseWriter, r *http.Request) {
 		Status           string  `json:"status"`
 	}
 	err := h.db.QueryRow(r.Context(),
-		`SELECT id, title, description, difficulty, distance_km, estimated_minutes, status FROM routes WHERE id=$1`, id,
+		`SELECT id, title, description, difficulty, distance_km, estimated_duration, status FROM routes WHERE id=$1`, id,
 	).Scan(&rt.ID, &rt.Title, &rt.Description, &rt.Difficulty, &rt.DistanceKm, &rt.EstimatedMinutes, &rt.Status)
 	if err != nil {
 		jsonErr(w, "not found", 404)
@@ -75,6 +75,7 @@ func (h *Handler) CreateRoute(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	var body struct {
 		Title       string  `json:"title"`
+		Description *string `json:"description"`
 		Difficulty  string  `json:"difficulty"`
 		DistanceKm  float64 `json:"distance_km"`
 		Minutes     int     `json:"estimated_minutes"`
@@ -85,8 +86,8 @@ func (h *Handler) CreateRoute(w http.ResponseWriter, r *http.Request) {
 	}
 	var id string
 	h.db.QueryRow(r.Context(),
-		`INSERT INTO routes (title, difficulty, distance_km, estimated_minutes) VALUES ($1,$2,$3,$4) RETURNING id`,
-		body.Title, body.Difficulty, body.DistanceKm, body.Minutes,
+		`INSERT INTO routes (title, description, difficulty, distance_km, estimated_duration) VALUES ($1,$2,$3,$4,$5) RETURNING id`,
+		body.Title, body.Description, body.Difficulty, body.DistanceKm, body.Minutes,
 	).Scan(&id)
 	jsonOK(w, map[string]string{"id": id})
 }
