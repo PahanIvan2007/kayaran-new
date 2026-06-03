@@ -127,6 +127,13 @@ func main() {
 	r.Get("/franchises", h.ListFranchises)
 	r.Get("/franchises/{id}", h.GetFranchise)
 
+	// SPA fallback: serve index.html for unmatched routes (Angular client-side routing)
+	if angularDir != "" {
+		r.NotFound(func(w http.ResponseWriter, r *http.Request) {
+			http.ServeFile(w, r, filepath.Join(angularDir, "index.html"))
+		})
+	}
+
 	log.Printf("🚀 Kayran Go API on :%s", cfg.Port)
 	log.Printf("📖 Frontend: http://localhost:%s", cfg.Port)
 	log.Fatal(http.ListenAndServe(":"+cfg.Port, r))

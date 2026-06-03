@@ -72,6 +72,7 @@ func (h *Handler) GetRoute(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) CreateRoute(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
 	var body struct {
 		Title       string  `json:"title"`
 		Difficulty  string  `json:"difficulty"`

@@ -11,6 +11,7 @@ import (
 )
 
 func (h *Handler) CreateRental(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
 	uid := middleware.GetUserID(r)
 	var req struct {
 		EventID   string `json:"event_id"`
@@ -28,7 +29,7 @@ func (h *Handler) CreateRental(w http.ResponseWriter, r *http.Request) {
 		req.EventID, req.BoatID, uid, st,
 	).Scan(&id)
 	if err != nil {
-		jsonErr(w, err.Error(), 400)
+		jsonErr(w, "rental creation failed", 400)
 		return
 	}
 	h.db.Exec(r.Context(), `UPDATE boats SET status='rented' WHERE id=$1`, req.BoatID)
@@ -49,6 +50,7 @@ func (h *Handler) ReturnRental(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) ReportDamage(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
 	id := chi.URLParam(r, "id")
 	var req struct {
 		ConditionLevel string `json:"condition_level"`

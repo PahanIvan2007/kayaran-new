@@ -1,8 +1,10 @@
 use std::f64::consts::PI;
 
 const EARTH_RADIUS_KM: f64 = 6371.0;
+const STRIDE: usize = 5;
+const _: usize = 40 - STRIDE * 8;
 
-fn deg_to_rad(d: f64) -> f64 { d * PI / 180.0 }
+const fn deg_to_rad(d: f64) -> f64 { d * PI / 180.0 }
 
 fn haversine(lat1: f64, lng1: f64, lat2: f64, lng2: f64) -> f64 {
     let dlat = deg_to_rad(lat2 - lat1);
@@ -27,169 +29,132 @@ pub extern "C" fn calculate_bearing(lat1: f64, lng1: f64, lat2: f64, lng2: f64) 
     (y.atan2(x).to_degrees() + 360.0) % 360.0
 }
 
-#[repr(C)]
-#[derive(Clone, Copy)]
-pub struct GpsPoint {
-    pub lat: f64,
-    pub lng: f64,
-    pub timestamp: f64,
-    pub speed: f64,
-    pub altitude: f64,
-}
+/// Flat f64 array processing: stride=5 (lat,lng,timestamp,speed,altitude).
+/// No struct copies — raw `&[f64]` cast from WASM memory for cache-friendly sequential access.
+#[inline(always)]
+fn lat(f: &[f64], i: usize) -> f64 { f[i * STRIDE] }
+#[inline(always)]
+fn lng(f: &[f64], i: usize) -> f64 { f[i * STRIDE + 1] }
+#[inline(always)]
+fn ts(f: &[f64], i: usize) -> f64 { f[i * STRIDE + 2] }
+#[inline(always)]
+fn spd(f: &[f64], i: usize) -> f64 { f[i * STRIDE + 3] }
+#[inline(always)]
+fn alt(f: &[f64], i: usize) -> f64 { f[i * STRIDE + 4] }
 
-fn write_f64(mem: &mut [u8], offset: usize, val: f64) {
-    let bytes = val.to_le_bytes();
-    mem[offset..offset + 8].copy_from_slice(&bytes);
-}
-
-fn read_f64(mem: &[u8], offset: usize) -> f64 {
-    let mut bytes = [0u8; 8];
-    bytes.copy_from_slice(&mem[offset..offset + 8]);
-    f64::from_le_bytes(bytes)
-}
-
-fn read_point(mem: &[u8], offset: usize) -> GpsPoint {
-    GpsPoint {
-        lat: read_f64(mem, offset),
-        lng: read_f64(mem, offset + 8),
-        timestamp: read_f64(mem, offset + 16),
-        speed: read_f64(mem, offset + 24),
-        altitude: read_f64(mem, offset + 32),
-    }
-}
-
-fn write_point(mem: &mut [u8], offset: usize, p: &GpsPoint) {
-    write_f64(mem, offset, p.lat);
-    write_f64(mem, offset + 8, p.lng);
-    write_f64(mem, offset + 16, p.timestamp);
-    write_f64(mem, offset + 24, p.speed);
-    write_f64(mem, offset + 32, p.altitude);
-}
-
-/// Track stats stored as 5 sequential f64 values in memory:
-/// [0]: total_distance_km, [1]: avg_speed_kmh, [2]: max_speed_kmh,
-/// [3]: duration_secs, [4]: elevation_gain_m
+/// Track stats: [total_dist_km, avg_speed_kmh, max_speed_kmh, duration_secs, elev_gain_m]
 #[no_mangle]
 pub extern "C" fn calc_track_stats(mem: *mut u8, count: i32) -> i32 {
     if count < 1 { return 0 }
-    let points_slice = unsafe { std::slice::from_raw_parts(mem as *const u8, (count as usize) * 40) };
-    let mut total_dist = 0.0;
-    let mut max_speed = read_f64(points_slice, 24);
+    let n = count as usize;
+    let f = unsafe { &*core::ptr::slice_from_raw_parts(mem as *const f64, n * STRIDE) };
+    let mut dist = 0.0;
+    let mut max_speed = spd(f, 0);
     let mut elev_gain = 0.0;
     let mut speed_sum = 0.0;
-    let mut speed_count = 0;
+    let mut speed_cnt = 0;
 
-    for i in 1..count as usize {
-        let prev = read_point(points_slice, (i - 1) * 40);
-        let curr = read_point(points_slice, i * 40);
-        total_dist += haversine(prev.lat, prev.lng, curr.lat, curr.lng);
-        if curr.speed > max_speed { max_speed = curr.speed }
-        if curr.speed > 0.0 { speed_sum += curr.speed; speed_count += 1 }
-        let alt_diff = curr.altitude - prev.altitude;
-        if alt_diff > 0.0 { elev_gain += alt_diff }
+    for i in 1..n {
+        let d = haversine(lat(f, i - 1), lng(f, i - 1), lat(f, i), lng(f, i));
+        dist += d;
+        let s = spd(f, i);
+        if s > max_speed { max_speed = s }
+        if s > 0.0 { speed_sum += s; speed_cnt += 1 }
+        let ad = alt(f, i) - alt(f, i - 1);
+        if ad > 0.0 { elev_gain += ad }
     }
 
-    let first_ts = read_f64(points_slice, 16);
-    let last_ts = read_f64(points_slice, ((count as usize) - 1) * 40 + 16);
-    let duration = last_ts - first_ts;
-    let avg_speed = if duration > 0.0 {
-        (total_dist / (duration / 3600.0)).abs()
-    } else if speed_count > 0 { speed_sum / speed_count as f64 } else { 0.0 };
+    let dur = ts(f, n - 1) - ts(f, 0);
+    let avg = if dur > 0.0 { (dist / (dur / 3600.0)).abs() }
+              else if speed_cnt > 0 { speed_sum / speed_cnt as f64 } else { 0.0 };
 
-    let result = unsafe { std::slice::from_raw_parts_mut(mem, 40) };
-    write_f64(result, 0, (total_dist * 1000.0).round() / 1000.0);
-    write_f64(result, 8, (avg_speed * 1000.0).round() / 1000.0);
-    write_f64(result, 16, (max_speed * 1000.0).round() / 1000.0);
-    write_f64(result, 24, (duration * 1000.0).round() / 1000.0);
-    write_f64(result, 32, (elev_gain * 1000.0).round() / 1000.0);
+    let out = unsafe { &mut *core::ptr::slice_from_raw_parts_mut(mem as *mut f64, STRIDE) };
+    out[0] = (dist * 1000.0).round() / 1000.0;
+    out[1] = (avg * 1000.0).round() / 1000.0;
+    out[2] = (max_speed * 1000.0).round() / 1000.0;
+    out[3] = (dur * 1000.0).round() / 1000.0;
+    out[4] = (elev_gain * 1000.0).round() / 1000.0;
     1
 }
 
-fn perpendicular_dist(point: &GpsPoint, start: &GpsPoint, end: &GpsPoint) -> f64 {
-    let dx = end.lng - start.lng;
-    let dy = end.lat - start.lat;
+fn perp_dist(flats: &[f64], pi: usize, si: usize, ei: usize) -> f64 {
+    let dx = lng(flats, ei) - lng(flats, si);
+    let dy = lat(flats, ei) - lat(flats, si);
     let len_sq = dx * dx + dy * dy;
-    if len_sq == 0.0 { return haversine(point.lat, point.lng, start.lat, start.lng) }
-    let t = (((point.lng - start.lng) * dx + (point.lat - start.lat) * dy) / len_sq).clamp(0.0, 1.0);
-    haversine(point.lat, point.lng, start.lat + t * dy, start.lng + t * dx)
+    if len_sq == 0.0 { return haversine(lat(flats, pi), lng(flats, pi), lat(flats, si), lng(flats, si)) }
+    let t = (((lng(flats, pi) - lng(flats, si)) * dx + (lat(flats, pi) - lat(flats, si)) * dy) / len_sq).clamp(0.0, 1.0);
+    haversine(lat(flats, pi), lng(flats, pi), lat(flats, si) + t * dy, lng(flats, si) + t * dx)
 }
 
-fn rdp(points: &[GpsPoint], epsilon: f64, output: &mut Vec<GpsPoint>) {
-    if points.len() <= 2 { output.extend_from_slice(points); return }
+fn rdp_flat(flats: &[f64], start: usize, end: usize, epsilon: f64, output: &mut Vec<f64>) {
+    let n = end - start + 1;
+    if n <= 2 {
+        for i in start..=end {
+            output.push(lat(flats, i));
+            output.push(lng(flats, i));
+            output.push(ts(flats, i));
+            output.push(spd(flats, i));
+            output.push(alt(flats, i));
+        }
+        return;
+    }
     let mut dmax = 0.0;
-    let mut idx = 0;
-    for i in 1..points.len() - 1 {
-        let d = perpendicular_dist(&points[i], &points[0], &points[points.len() - 1]);
+    let mut idx = start;
+    for i in (start + 1)..end {
+        let d = perp_dist(flats, i, start, end);
         if d > dmax { dmax = d; idx = i }
     }
     if dmax > epsilon {
-        rdp(&points[..=idx], epsilon, output);
-        rdp(&points[idx..], epsilon, output);
+        rdp_flat(flats, start, idx, epsilon, output);
+        rdp_flat(flats, idx, end, epsilon, output);
     } else {
-        output.push(points[0]);
-        output.push(points[points.len() - 1]);
+        for i in [start, end] {
+            output.push(lat(flats, i));
+            output.push(lng(flats, i));
+            output.push(ts(flats, i));
+            output.push(spd(flats, i));
+            output.push(alt(flats, i));
+        }
     }
 }
 
-/// Input: memory buffer with `count` GpsPoints (40 bytes each).
-/// Output: overwrites the buffer with simplified points.
-/// Returns: new count.
 #[no_mangle]
 pub extern "C" fn simplify_track(mem: *mut u8, count: i32, epsilon: f64) -> i32 {
     if count < 2 { return count }
-    let mem_size = (count as usize) * 40;
-    let input = unsafe { std::slice::from_raw_parts(mem as *const u8, mem_size) };
-    let mut points: Vec<GpsPoint> = Vec::with_capacity(count as usize);
-    for i in 0..count as usize {
-        points.push(read_point(input, i * 40));
-    }
-    let mut result = Vec::new();
-    rdp(&points, epsilon, &mut result);
-    result.dedup_by(|a, b| (a.lat - b.lat).abs() < 1e-12 && (a.lng - b.lng).abs() < 1e-12);
-    let n = result.len().min(count as usize);
-    let output = unsafe { std::slice::from_raw_parts_mut(mem, n * 40) };
-    for (i, p) in result.iter().take(n).enumerate() {
-        write_point(output, i * 40, p);
-    }
-    n as i32
+    let n = count as usize;
+    let f = unsafe { &*core::ptr::slice_from_raw_parts(mem as *const f64, n * STRIDE) };
+    let mut result: Vec<f64> = Vec::new();
+    rdp_flat(f, 0, n - 1, epsilon, &mut result);
+    let m = (result.len() / STRIDE).min(n);
+    let out = unsafe { &mut *core::ptr::slice_from_raw_parts_mut(mem as *mut f64, m * STRIDE) };
+    out.copy_from_slice(&result[..m * STRIDE]);
+    m as i32
 }
 
-/// Same memory layout as simplify_track.
-/// Returns: new count after interpolation.
 #[no_mangle]
 pub extern "C" fn interpolate_track(mem: *mut u8, count: i32, max_gap_secs: f64) -> i32 {
     if count < 2 { return count }
-    let mem_size = (count as usize) * 40;
-    let input = unsafe { std::slice::from_raw_parts(mem as *const u8, mem_size) };
-    let mut points: Vec<GpsPoint> = Vec::with_capacity(count as usize);
-    for i in 0..count as usize {
-        points.push(read_point(input, i * 40));
-    }
-    let mut result = Vec::with_capacity(count as usize * 2);
-    result.push(points[0]);
-    for i in 1..points.len() {
-        let prev = &points[i - 1];
-        let curr = &points[i];
-        let dt = curr.timestamp - prev.timestamp;
+    let n = count as usize;
+    let f = unsafe { &*core::ptr::slice_from_raw_parts(mem as *const f64, n * STRIDE) };
+    let mut result: Vec<f64> = Vec::with_capacity(n * 2 * STRIDE);
+    for i in 0..STRIDE { result.push(f[i]) }
+    for i in 1..n {
+        let dt = ts(f, i) - ts(f, i - 1);
         if dt > max_gap_secs && dt > 0.0 {
             let steps = (dt / max_gap_secs).ceil() as usize;
             for j in 1..steps {
                 let t = j as f64 / steps as f64;
-                result.push(GpsPoint {
-                    lat: prev.lat + (curr.lat - prev.lat) * t,
-                    lng: prev.lng + (curr.lng - prev.lng) * t,
-                    timestamp: prev.timestamp + dt * t,
-                    speed: prev.speed + (curr.speed - prev.speed) * t,
-                    altitude: prev.altitude + (curr.altitude - prev.altitude) * t,
-                });
+                result.push(lat(f, i - 1) + (lat(f, i) - lat(f, i - 1)) * t);
+                result.push(lng(f, i - 1) + (lng(f, i) - lng(f, i - 1)) * t);
+                result.push(ts(f, i - 1) + dt * t);
+                result.push(spd(f, i - 1) + (spd(f, i) - spd(f, i - 1)) * t);
+                result.push(alt(f, i - 1) + (alt(f, i) - alt(f, i - 1)) * t);
             }
         }
-        result.push(*curr);
+        for k in 0..STRIDE { result.push(f[i * STRIDE + k]) }
     }
-    let n = result.len().min(count as usize * 2);
-    let output = unsafe { std::slice::from_raw_parts_mut(mem, n * 40) };
-    for (i, p) in result.iter().take(n).enumerate() {
-        write_point(output, i * 40, p);
-    }
-    n as i32
+    let m = (result.len() / STRIDE).min(n * 2);
+    let out = unsafe { &mut *core::ptr::slice_from_raw_parts_mut(mem as *mut f64, m * STRIDE) };
+    out.copy_from_slice(&result[..m * STRIDE]);
+    m as i32
 }

@@ -4,11 +4,21 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"net/http"
+	"time"
 
 	"kayran/backend/config"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+var (
+	ErrNotFound    = errors.New("resource not found")
+	ErrConflict    = errors.New("conflict")
+	ErrBadRequest  = errors.New("bad request")
+	ErrUnauthorized = errors.New("unauthorized")
+	ErrOffline     = errors.New("service unavailable")
 )
 
 func randomID() string {
@@ -18,12 +28,13 @@ func randomID() string {
 }
 
 type Handler struct {
-	db  *pgxpool.Pool
-	cfg *config.Config
+	db       *pgxpool.Pool
+	cfg      *config.Config
+	boatCache *Cache[[]byte]
 }
 
 func New(db *pgxpool.Pool, cfg *config.Config) *Handler {
-	return &Handler{db: db, cfg: cfg}
+	return &Handler{db: db, cfg: cfg, boatCache: NewCache[[]byte](30 * time.Second)}
 }
 
 func jsonOK(w http.ResponseWriter, v any) {

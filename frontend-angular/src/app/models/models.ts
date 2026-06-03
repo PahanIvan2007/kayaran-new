@@ -1,105 +1,111 @@
 export interface User {
-  id: string;
-  first_name: string;
-  last_name: string;
-  phone: string;
-  role: string;
-  status: string;
+  readonly id: string;
+  readonly first_name: string;
+  readonly last_name: string;
+  readonly phone: string;
+  readonly role: string;
+  readonly status: string;
 }
 
 export interface Boat {
-  id: string;
-  point_id: string;
-  serial_number: string;
-  title?: string;
-  boat_type: string;
-  color?: string;
-  capacity: number;
-  status: string;
-  condition_level: string;
+  readonly id: string;
+  readonly point_id: string;
+  readonly serial_number: string;
+  readonly title?: string;
+  readonly boat_type: string;
+  readonly color?: string;
+  readonly capacity: number;
+  readonly status: string;
+  readonly condition_level: string;
 }
 
 export interface Event {
-  id: string;
-  event_type: string;
-  title: string;
-  description?: string;
-  status: string;
-  start_time: string;
-  end_time?: string;
-  point_id?: string;
+  readonly id: string;
+  readonly event_type: string;
+  readonly title: string;
+  readonly description?: string;
+  readonly status: string;
+  readonly start_time: string;
+  readonly end_time?: string;
+  readonly point_id?: string;
 }
 
 export interface Team {
-  id: string;
-  title: string;
-  captain_user_id: string;
-  status: string;
+  readonly id: string;
+  readonly title: string;
+  readonly captain_user_id: string;
+  readonly status: string;
 }
 
 export interface Tournament {
-  id: string;
-  title: string;
-  format: string;
-  status: string;
-  start_time?: string;
-  end_time?: string;
+  readonly id: string;
+  readonly title: string;
+  readonly format: string;
+  readonly status: string;
+  readonly start_time?: string;
+  readonly end_time?: string;
 }
 
 export interface Match {
-  id: string;
-  tournament_id: string;
-  round: number;
-  position: number;
-  team1_id?: string;
-  team2_id?: string;
-  score_team1?: number;
-  score_team2?: number;
-  status: string;
-  start_time?: string;
+  readonly id: string;
+  readonly tournament_id: string;
+  readonly round: number;
+  readonly position: number;
+  readonly team1_id?: string;
+  readonly team2_id?: string;
+  readonly score_team1?: number;
+  readonly score_team2?: number;
+  readonly status: string;
+  readonly start_time?: string;
 }
 
 export interface Rental {
-  id: string;
-  event_id: string;
-  boat_id: string;
-  user_id?: string;
-  start_time: string;
-  end_time?: string;
-  status: string;
-  boat?: Boat;
-  event?: Event;
+  readonly id: string;
+  readonly event_id: string;
+  readonly boat_id: string;
+  readonly user_id?: string;
+  readonly start_time: string;
+  readonly end_time?: string;
+  readonly status: string;
+  readonly boat?: Boat;
+  readonly event?: Event;
 }
 
 export interface GpsTrack {
-  id: string;
-  event_id: string;
-  user_id?: string;
-  device_id?: string;
-  started_at?: string;
-  stopped_at?: string;
-  status: string;
+  readonly id: string;
+  readonly event_id: string;
+  readonly user_id?: string;
+  readonly device_id?: string;
+  readonly started_at?: string;
+  readonly stopped_at?: string;
+  readonly status: string;
 }
 
 export interface Route {
-  id: string;
-  title: string;
-  description?: string;
-  difficulty?: string;
-  distance_km?: number;
-  status: string;
-  start_point_id?: string;
-  end_point_id?: string;
+  readonly id: string;
+  readonly title: string;
+  readonly description?: string;
+  readonly difficulty?: string;
+  readonly distance_km?: number;
+  readonly status: string;
+  readonly start_point_id?: string;
+  readonly end_point_id?: string;
 }
 
 export interface AuthResponse {
-  access_token: string;
-  token_type: string;
-  user: User;
+  readonly access_token: string;
+  readonly token_type: string;
+  readonly user: User;
 }
 
 export interface Franchise {
-  id: string;
-  name: string;
-  status: string;
+  readonly id: string;
+  readonly name: string;
+  readonly status: string;
 }
+
+export type BoatStatus = 'available' | 'rented' | 'maintenance' | 'deleted';
+export type UserRole = 'system_admin' | 'participant' | 'instructor' | 'judge' | 'deleted';
+export type RentalStatus = 'active' | 'completed' | 'cancelled';
+export type EventStatus = 'draft' | 'active' | 'completed' | 'cancelled' | 'deleted';
+export type Difficulty = 'easy' | 'medium' | 'hard' | 'extreme';

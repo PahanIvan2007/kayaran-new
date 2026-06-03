@@ -29,6 +29,7 @@ func (h *Handler) ListEvents(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) CreateEvent(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
 	uid := middleware.GetUserID(r)
 	var e struct {
 		EventType string `json:"event_type"`
@@ -65,6 +66,7 @@ func (h *Handler) GetEvent(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) UpdateEvent(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
 	id := chi.URLParam(r, "id")
 	var body map[string]any
 	json.NewDecoder(r.Body).Decode(&body)
@@ -84,7 +86,7 @@ func (h *Handler) AddParticipant(w http.ResponseWriter, r *http.Request) {
 	_, err := h.db.Exec(r.Context(),
 		`INSERT INTO event_participants (event_id, user_id) VALUES ($1,$2) ON CONFLICT DO NOTHING`, id, uid)
 	if err != nil {
-		jsonErr(w, err.Error(), 400)
+		jsonErr(w, "failed to add participant", 400)
 		return
 	}
 	jsonOK(w, map[string]string{"status": "added"})

@@ -11,6 +11,7 @@ import (
 )
 
 func (h *Handler) StartTrack(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
 	uid := middleware.GetUserID(r)
 	var req struct {
 		EventID  string `json:"event_id"`
@@ -34,6 +35,7 @@ func (h *Handler) StopTrack(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) AddPoints(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
 	id := chi.URLParam(r, "id")
 	var req struct {
 		Points []struct {

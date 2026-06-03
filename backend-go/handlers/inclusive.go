@@ -8,6 +8,7 @@ import (
 )
 
 func (h *Handler) UpdateAccessibility(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
 	id := chi.URLParam(r, "id")
 	var body map[string]any
 	json.NewDecoder(r.Body).Decode(&body)
@@ -21,6 +22,7 @@ func (h *Handler) UpdateAccessibility(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) AddMedical(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
 	id := chi.URLParam(r, "id")
 	var body map[string]any
 	json.NewDecoder(r.Body).Decode(&body)

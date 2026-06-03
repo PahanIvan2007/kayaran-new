@@ -1,5 +1,7 @@
 import { Injectable, signal } from '@angular/core';
 
+const API_BASE = (window as any).__API_URL__ || window.location.origin;
+
 @Injectable({ providedIn: 'root' })
 export class ApiService {
   private token: string | null = localStorage.getItem('kayran_token');
@@ -25,7 +27,7 @@ export class ApiService {
 
   async request<T>(path: string, opts: RequestInit = {}): Promise<T> {
     const cacheKey = 'api:' + path;
-    const apiUrl = window.location.origin;
+    const apiUrl = API_BASE;
     try {
       if (this.isOffline()) throw new Error('offline');
       const res = await fetch(apiUrl + path, { ...opts, headers: { ...this.getHeaders(), ...(opts.headers as Record<string, string> || {}) } });

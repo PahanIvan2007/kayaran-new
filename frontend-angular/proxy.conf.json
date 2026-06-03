@@ -1,6 +1,17 @@
 {
   "/api": { "target": "http://localhost:8000", "secure": false },
   "/auth": { "target": "http://localhost:8000", "secure": false },
+  "/boats": { "target": "http://localhost:8000", "secure": false },
+  "/events": { "target": "http://localhost:8000", "secure": false },
+  "/rentals": { "target": "http://localhost:8000", "secure": false },
+  "/gps": { "target": "http://localhost:8000", "secure": false },
+  "/routes": { "target": "http://localhost:8000", "secure": false },
+  "/teams": { "target": "http://localhost:8000", "secure": false },
+  "/tournaments": { "target": "http://localhost:8000", "secure": false },
+  "/matches": { "target": "http://localhost:8000", "secure": false },
+  "/profiles": { "target": "http://localhost:8000", "secure": false },
+  "/users": { "target": "http://localhost:8000", "secure": false },
+  "/franchises": { "target": "http://localhost:8000", "secure": false },
   "/docs": { "target": "http://localhost:8000", "secure": false, "changeOrigin": true },
   "/openapi.json": { "target": "http://localhost:8000", "secure": false }
 }

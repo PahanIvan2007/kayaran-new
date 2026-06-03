@@ -1,4 +1,5 @@
 import { Component, OnInit, signal, inject } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { BoatsService } from '../../services/boats.service';
 import { ApiService } from '../../services/api.service';
 import { QrComponent } from '../../components/qr/qr.component';
@@ -58,12 +59,12 @@ import type { Boat } from '../../models/models';
         <div class="card-title">🚣 Бронирование <span style="color:var(--text);font-family:var(--font-body);text-transform:none;letter-spacing:0;">{{ bookingBoat()?.title || bookingBoat()?.serial_number }}</span></div>
         <form (ngSubmit)="confirmBooking()">
           <label class="text-xs text-muted" style="display:block;margin-bottom:2px;">Дата и время начала</label>
-          <input #startDate type="datetime-local" [value]="defaultStart()" style="margin-bottom:6px;">
+          <input type="datetime-local" [ngModel]="startTime()" (ngModelChange)="startTime.set($event)" name="startDt" style="margin-bottom:6px;">
 
           <label class="text-xs text-muted" style="display:block;margin-bottom:2px;">Длительность (часов)</label>
-          <select #duration style="margin-bottom:6px;">
+          <select [ngModel]="duration()" (ngModelChange)="duration.set($event)" name="durHours" style="margin-bottom:6px;">
             <option value="1">1 час</option>
-            <option value="2" selected>2 часа</option>
+            <option value="2">2 часа</option>
             <option value="3">3 часа</option>
             <option value="4">4 часа</option>
             <option value="6">6 часов</option>
@@ -94,7 +95,7 @@ import type { Boat } from '../../models/models';
       </div>
     }
   `,
-  imports: [QrComponent],
+  imports: [FormsModule, QrComponent],
 })
 export class BoatsComponent implements OnInit {
   private boatsService = inject(BoatsService);
@@ -107,6 +108,8 @@ export class BoatsComponent implements OnInit {
   showBooking = signal(false);
   bookingBoat = signal<Boat | null>(null);
   selectedTariff = signal('standard');
+  startTime = signal('');
+  duration = signal('2');
   tariffs = [
     { id: 'standard', name: 'Стандартный', desc: 'базовый тариф', price: 1500, multiplier: 1.0 },
     { id: 'family', name: 'Семейный (-20%)', desc: 'для двоих и более', price: 1200, multiplier: 0.8 },
@@ -119,7 +122,7 @@ export class BoatsComponent implements OnInit {
     return map[cl] || 3;
   }
 
-  defaultStart() {
+  private defaultStart(): string {
     const d = new Date();
     d.setHours(d.getHours() + 1, 0, 0, 0);
     return d.toISOString().slice(0, 16);
@@ -147,6 +150,8 @@ export class BoatsComponent implements OnInit {
   openBooking(b: Boat) {
     this.bookingBoat.set(b);
     this.selectedTariff.set('standard');
+    this.startTime.set(this.defaultStart());
+    this.duration.set('2');
     this.showBooking.set(true);
   }
 
@@ -158,25 +163,26 @@ export class BoatsComponent implements OnInit {
   async confirmBooking() {
     const boat = this.bookingBoat();
     if (!boat) return;
-    const startInput = document.querySelector('input[type="datetime-local"]') as HTMLInputElement;
-    const durSelect = document.querySelector('select') as HTMLSelectElement;
-    const startTime = startInput?.value || new Date().toISOString();
-    const hours = parseInt(durSelect?.value || '2');
     const tariff = this.tariffs.find(t => t.id === this.selectedTariff());
+    const st = this.startTime();
+    if (!st) { alert('Выберите дату и время'); return }
     try {
       const ev = await this.api.post<any>('/events', {
         event_type: 'rental',
-        title: 'Аренда ' + (boat.title || boat.serial_number) + ' (' + tariff?.name + ')',
-        start_time: new Date(startTime).toISOString(),
+        title: 'Аренда ' + (boat.title || boat.serial_number) + ' (' + (tariff?.name || 'Стандартный') + ')',
+        start_time: new Date(st).toISOString(),
         point_id: boat.point_id || 'P000001',
       });
       await this.api.post<any>('/rentals', {
         event_id: ev.id,
         boat_id: boat.id,
-        start_time: new Date(startTime).toISOString(),
+        start_time: new Date(st).toISOString(),
       });
       this.closeBooking();
       this.loadBoats();
-    } catch (e: any) { alert(e.message); }
+    } catch (e: any) {
+      console.error('Booking error:', e);
+      alert('Ошибка: ' + e.message);
+    }
   }
 }

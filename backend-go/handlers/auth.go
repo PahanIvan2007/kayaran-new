@@ -19,6 +19,7 @@ type registerReq struct {
 }
 
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
 	var req registerReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		jsonErr(w, "invalid body", 400)
@@ -37,7 +38,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	).Scan(&user.ID, &user.FirstName, &user.LastName, &user.Phone, &user.Role, &user.Status, &user.CreatedAt)
 
 	if err != nil {
-		jsonErr(w, "phone exists: "+err.Error(), 409)
+		jsonErr(w, "phone already registered", 409)
 		return
 	}
 
@@ -52,6 +53,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
 	var req struct{ Phone string `json:"phone"` }
 	json.NewDecoder(r.Body).Decode(&req)
 	log.Printf("Login attempt phone=[%s]", req.Phone)

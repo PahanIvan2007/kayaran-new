@@ -39,6 +39,7 @@ func (h *Handler) GetUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) UpdateUser(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
 	id := chi.URLParam(r, "id")
 	var body map[string]any
 	json.NewDecoder(r.Body).Decode(&body)

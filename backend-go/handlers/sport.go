@@ -28,6 +28,7 @@ func (h *Handler) ListTeams(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) CreateTeam(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
 	uid := middleware.GetUserID(r)
 	var req struct{ Title string `json:"title"` }
 	json.NewDecoder(r.Body).Decode(&req)
@@ -60,6 +61,7 @@ func (h *Handler) ListTournaments(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) CreateTournament(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
 	var req struct {
 		Title  string `json:"title"`
 		Format string `json:"format"`
@@ -78,6 +80,7 @@ func (h *Handler) CreateTournament(w http.ResponseWriter, r *http.Request) {
 
 // Matches
 func (h *Handler) CreateMatch(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
 	var req struct {
 		TournamentID string `json:"tournament_id"`
 		Team1ID      string `json:"team1_id"`
@@ -93,6 +96,7 @@ func (h *Handler) CreateMatch(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) SetScore(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
 	id := chi.URLParam(r, "id")
 	var req struct {
 		Score1 int `json:"score1"`
