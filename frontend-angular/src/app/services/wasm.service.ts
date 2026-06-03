@@ -17,9 +17,12 @@ export interface TrackStats {
   point_count: number;
 }
 
+const STRIDE = 5;
+
 @Injectable({ providedIn: 'root' })
 export class WasmService {
   private wasm: any = null;
+  private mem: WebAssembly.Memory | null = null;
   ready = signal(false);
   loading = signal(false);
   error = signal<string | null>(null);
@@ -34,6 +37,7 @@ export class WasmService {
       const bytes = await resp.arrayBuffer();
       const result = await WebAssembly.instantiate(bytes, {});
       this.wasm = result.instance.exports;
+      this.mem = (this.wasm as any).memory || null;
       this.ready.set(true);
     } catch (e: any) {
       console.warn('WASM not available, using JS fallback:', e.message);
@@ -43,14 +47,48 @@ export class WasmService {
     this.loading.set(false);
   }
 
+  private ensureBuf(points: GpsPoint[]): Float64Array | null {
+    if (!this.mem) return null;
+    const n = points.length;
+    const maxOut = Math.max(n * 2, 1) + 5;
+    const needed = maxOut * STRIDE * 8;
+    while (this.mem.buffer.byteLength < needed) this.mem.grow(1);
+    const buf = new Float64Array(this.mem.buffer, 0, maxOut * STRIDE);
+    for (let i = 0; i < n; i++) {
+      buf[i * STRIDE] = points[i].lat;
+      buf[i * STRIDE + 1] = points[i].lng;
+      buf[i * STRIDE + 2] = points[i].timestamp;
+      buf[i * STRIDE + 3] = points[i].speed;
+      buf[i * STRIDE + 4] = points[i].altitude;
+    }
+    return buf;
+  }
+
+  private readPoints(buf: Float64Array, count: number): GpsPoint[] {
+    const out: GpsPoint[] = [];
+    for (let i = 0; i < count; i++) {
+      out.push({ lat: buf[i * STRIDE], lng: buf[i * STRIDE + 1], timestamp: buf[i * STRIDE + 2], speed: buf[i * STRIDE + 3], altitude: buf[i * STRIDE + 4] });
+    }
+    return out;
+  }
+
   calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
     return this.wasm?.calculate_distance?.(lat1, lng1, lat2, lng2)
       ?? new JsGpsFallback().calculate_distance(lat1, lng1, lat2, lng2);
   }
 
   calculateTrackStats(points: GpsPoint[]): TrackStats {
-    if (this.wasm?.calculate_track_stats) {
-      return this.wasm.calculate_track_stats(points);
+    const buf = this.ensureBuf(points);
+    if (buf && this.wasm?.calc_track_stats) {
+      this.wasm.calc_track_stats(0, points.length);
+      return {
+        total_distance_km: Math.round(buf[0] * 1000) / 1000,
+        avg_speed_kmh: Math.round(buf[1] * 1000) / 1000,
+        max_speed_kmh: Math.round(buf[2] * 1000) / 1000,
+        duration_secs: Math.round(buf[3] * 1000) / 1000,
+        elevation_gain_m: Math.round(buf[4] * 1000) / 1000,
+        point_count: points.length,
+      };
     }
     return new JsGpsFallback().calculate_track_stats(points);
   }
@@ -61,15 +99,19 @@ export class WasmService {
   }
 
   interpolatePoints(points: GpsPoint[], maxGapSeconds: number = 30): GpsPoint[] {
-    if (this.wasm?.interpolate_points) {
-      return this.wasm.interpolate_points(points, maxGapSeconds);
+    const buf = this.ensureBuf(points);
+    if (buf && this.wasm?.interpolate_track) {
+      const newCount = this.wasm.interpolate_track(0, points.length, maxGapSeconds);
+      return this.readPoints(buf, newCount);
     }
     return new JsGpsFallback().interpolate_points(points, maxGapSeconds);
   }
 
   simplifyTrack(points: GpsPoint[], epsilon: number = 0.001): GpsPoint[] {
-    if (this.wasm?.simplify_track) {
-      return this.wasm.simplify_track(points, epsilon);
+    const buf = this.ensureBuf(points);
+    if (buf && this.wasm?.simplify_track) {
+      const newCount = this.wasm.simplify_track(0, points.length, epsilon);
+      return this.readPoints(buf, newCount);
     }
     return new JsGpsFallback().simplify_track(points, epsilon);
   }
