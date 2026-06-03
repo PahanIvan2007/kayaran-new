@@ -54,13 +54,13 @@ import type { Boat } from '../../models/models';
       </div>
     }
 
-    @if (showPayment(); as pmt) {
+    @if (showPayment()) {
       <div class="card payment-confirm">
         <div class="card-title">✅ Оплачено</div>
         <div style="text-align:center;padding:12px;">
-          <div style="font-size:28px;font-weight:700;color:var(--red-light);font-family:var(--font-display);">{{ pmt.amount }} ₽</div>
-          <div style="font-size:10px;color:var(--text-muted);margin-top:4px;">Платёж #{{ pmt.payment_id }}</div>
-          <div style="font-size:10px;color:var(--text-muted);">Аренда #{{ pmt.rental_id }}</div>
+          <div style="font-size:28px;font-weight:700;color:var(--red-light);font-family:var(--font-display);">{{ showPayment()!.amount }} ₽</div>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:4px;">Платёж #{{ showPayment()!.payment_id }}</div>
+          <div style="font-size:10px;color:var(--text-muted);">Аренда #{{ showPayment()!.rental_id }}</div>
         </div>
         <button class="btn btn-primary btn-block" (click)="showPayment.set(null)">OK</button>
       </div>

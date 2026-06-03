@@ -1424,6 +1424,12 @@ textarea { resize: vertical; min-height: 48px; }
   .hero-stat { padding: 6px 10px; }
   .hero-stat-value { font-size: 16px; }
   .hero-stat-label { font-size: 8px; }
+
+  .login-card { padding: 20px 16px; }
+  .login-header h2 { font-size: 18px; letter-spacing: 4px; }
+  .login-logo { width: 40px; height: 40px; font-size: 18px; }
+  .login-sub { font-size: 11px; }
+  .login-hint { font-size: 9px; }
 }
 
 /* Small phones */

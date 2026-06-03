@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterOutlet, RouterLink } from '@angular/router';
 import { ApiService } from './services/api.service';
 import { AuthService } from './services/auth.service';
@@ -62,9 +62,15 @@ import { AuthService } from './services/auth.service';
   `,
   imports: [RouterOutlet, RouterLink],
 })
-export class App {
+export class App implements OnInit {
   api = inject(ApiService);
   auth = inject(AuthService);
+
+  ngOnInit() {
+    if (localStorage.getItem('kayran_token')) {
+      this.auth.getMe().catch(() => {});
+    }
+  }
 
   showNotifs = signal(false);
   pwaPrompt = signal(false);
