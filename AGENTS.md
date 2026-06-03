@@ -53,8 +53,40 @@ $env:PGPASSWORD='123'
 | +79990000003 | Иван Петров | instructor |
 | +79990000012 | Татьяна Соколова | judge |
 
+## Python-микросервис (аналитика, погода, seed)
+```powershell
+cd D:\Кайран\backend-python
+pip install -r requirements.txt
+python run.py                              # :8001
+```
+
+### Python endpoints
+- `GET /health`
+- `GET /api/v1/analytics/summary`
+- `GET /api/v1/analytics/popular-routes`
+- `GET /api/v1/analytics/boat-utilization`
+- `POST /api/v1/seed/generate?users_count=50&boats_count=20`
+- `GET /api/v1/weather/forecast?lat=55.75&lng=37.61`
+- `GET /api/v1/weather/conditions?point_id=P000001`
+
+## Rust → WASM (GPS-вычисления в браузере)
+```powershell
+cd D:\Кайран\gps-wasm
+.\build.ps1  # нужен wasm-pack
+```
+
+Без wasm-pack — прямая сборка:
+```powershell
+$env:Path = "$env:USERPROFILE\.cargo\bin;$env:Path"
+cd D:\Кайран\gps-wasm
+cargo build --target wasm32-unknown-unknown --release
+Copy-Item target\wasm32-unknown-unknown\release\gps_wasm.wasm ..\frontend-angular\src\assets\wasm\gps_ops.wasm
+```
+
 ## Структура проекта
-- `D:\Кайран\frontend-angular\` — Angular PWA
-- `D:\Кайран\backend-go\` — Go API сервер
+- `D:\Кайран\frontend-angular\` — Angular PWA (+ Rust WASM fallback на JS)
+- `D:\Кайран\backend-go\` — Go API сервер (:8000)
+- `D:\Кайран\backend-python\` — Python FastAPI микросервис (:8001)
+- `D:\Кайран\gps-wasm\` — Rust WASM модуль GPS-вычислений
 - `D:\Кайран\db\` — SQL схемы и миграции
 - `D:\Кайран\docs\` — документация
