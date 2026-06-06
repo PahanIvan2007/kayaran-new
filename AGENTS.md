@@ -11,14 +11,21 @@ Start-Process -FilePath "D:\Кайран\backend-go\kayran-server.exe" -WindowSt
 Get-Process -Name kayran-server | Stop-Process -Force
 ```
 
-## Полная сборка (фронт → embed → Go)
+## Сборка и запуск
 ```powershell
-D:\Кайран\build.ps1
+# Полная сборка (React → embed → Go) + запуск
+D:\Кайран\build.ps1; if ($?) { Get-Process -Name kayran-server -ErrorAction SilentlyContinue | Stop-Process -Force; Start-Sleep -Seconds 2; $env:DATABASE_URL="postgres://postgres:123@localhost:5432/kayran?sslmode=disable"; Start-Process -FilePath "D:\Кайран\backend-go\kayran-server.exe" -WindowStyle Hidden; echo "OK" }
 ```
 
-## Полный рестарт (сборка + запуск сервера)
+## Сборка фронта отдельно
 ```powershell
-D:\Кайран\build.ps1; if ($?) { Get-Process -Name kayran-server -ErrorAction SilentlyContinue | Stop-Process -Force; Start-Sleep -Seconds 2; $env:DATABASE_URL="postgres://postgres:123@localhost:5432/kayran?sslmode=disable"; Start-Process -FilePath "D:\Кайран\backend-go\kayran-server.exe" -WindowStyle Hidden; echo "OK" }
+cd D:\Кайран\frontend-react; npm run build
+```
+
+## Dev-сервер React (с hot-reload)
+```powershell
+cd D:\Кайран\frontend-react; npm run dev
+# Фронт на :5173, API проксируется на :8000
 ```
 
 ## Проверка БД (PostgreSQL)
@@ -37,9 +44,8 @@ $env:PGPASSWORD='123'
 После этого запустить сервер — seed выполнится автоматически.
 
 ## Сайт
-- http://localhost:8000 — фронтенд
+- http://localhost:8000 — фронтенд (локально)
 - http://localhost:8000/docs — Swagger API (Go не имеет встроенного Swagger)
-- `https://kayran.fly.dev` — после деплоя на Fly.io (из любой сети)
 
 ## Тестовые пользователи (логин по телефону)
 | Телефон | Имя | Роль |

@@ -1,13 +1,13 @@
 $ErrorActionPreference = "Stop"
 $root = Split-Path $PSCommandPath -Parent
 
-Write-Host "=== Building Angular ==="
-Set-Location "$root\frontend-angular"
-ng build
-if (-not $?) { throw "Angular build failed" }
+Write-Host "=== Building React frontend ==="
+Set-Location "$root\frontend-react"
+npm run build
+if (-not $?) { throw "React build failed" }
 
 Write-Host "=== Copying dist to Go embed dir ==="
-$dist = "$root\frontend-angular\dist\frontend-angular\browser"
+$dist = "$root\frontend-react\dist\browser"
 $embed = "$root\backend-go\frontend-dist"
 if (Test-Path $embed) { Remove-Item -Recurse -Force $embed }
 New-Item -ItemType Directory -Path $embed -Force | Out-Null

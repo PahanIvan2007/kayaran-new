@@ -90,7 +90,7 @@ import { QrComponent } from '../../components/qr/qr.component';
           <p class="login-sub">Платформа водных активностей</p>
         </div>
         <form [formGroup]="loginForm" (ngSubmit)="register()">
-          <input formControlName="phone" type="text" placeholder="Телефон" autocomplete="tel">
+          <input formControlName="phone" type="tel" inputmode="tel" placeholder="Телефон" autocomplete="tel">
           <div class="form-row">
             <input formControlName="firstName" type="text" placeholder="Имя" autocomplete="given-name">
             <input formControlName="lastName" type="text" placeholder="Фамилия" autocomplete="family-name">

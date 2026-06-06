@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"kayran/backend/middleware"
@@ -11,6 +12,17 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 )
+
+var debugLog *log.Logger
+
+func init() {
+	f, err := os.Create("C:\\Users\\NK\\AppData\\Local\\Temp\\kayran_debug.log")
+	if err == nil {
+		debugLog = log.New(f, "", log.LstdFlags)
+	} else {
+		debugLog = log.Default()
+	}
+}
 
 type registerReq struct {
 	FirstName string `json:"first_name"`
@@ -56,7 +68,23 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	var req struct{ Phone string `json:"phone"` }
 	json.NewDecoder(r.Body).Decode(&req)
-	log.Printf("Login attempt phone=[%s]", req.Phone)
+	debugLog.Printf("Login attempt phone=[%s]", req.Phone)
+
+	var count int
+	h.db.QueryRow(r.Context(), "SELECT COUNT(*) FROM users WHERE status='active'").Scan(&count)
+	debugLog.Printf("Total active users: %d", count)
+
+	var count2 int
+	h.db.QueryRow(r.Context(), "SELECT COUNT(*) FROM users WHERE phone=$1 AND status='active'", req.Phone).Scan(&count2)
+	debugLog.Printf("Users matching phone=%s: %d", req.Phone, count2)
+
+	var id string
+	err2 := h.db.QueryRow(r.Context(), "SELECT id FROM users WHERE phone=$1 AND status='active' LIMIT 1", req.Phone).Scan(&id)
+	if err2 != nil {
+		debugLog.Printf("Simple query error: %v", err2)
+	} else {
+		debugLog.Printf("Found user id=%s", id)
+	}
 
 	var user models.User
 	err := h.db.QueryRow(r.Context(),
@@ -65,6 +93,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	).Scan(&user.ID, &user.FirstName, &user.LastName, &user.Phone, &user.Role, &user.Status)
 
 	if err != nil {
+		debugLog.Printf("Login query error: %v for phone=%s", err, req.Phone)
 		jsonErr(w, "user not found", 404)
 		return
 	}

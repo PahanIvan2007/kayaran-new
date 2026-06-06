@@ -72,6 +72,7 @@ body {
   line-height: 1.7;
   font-size: 17px;
   overflow-x: hidden;
+  overscroll-behavior: none;
 }
 
 /* ===== FLOATING EMBERS ===== */
@@ -1305,10 +1306,17 @@ textarea { resize: vertical; min-height: 48px; }
   .quick-actions { grid-template-columns: repeat(3, 1fr); gap: 12px; }
 }
 
+@supports (padding: max(0px)) {
+  .container { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-bottom: max(24px, env(safe-area-inset-bottom, 0px)); }
+  .toast { bottom: max(24px, env(safe-area-inset-bottom, 24px)); }
+  .modal-overlay { padding: max(24px, env(safe-area-inset-top, 24px)) max(24px, env(safe-area-inset-right, 24px)) max(24px, env(safe-area-inset-bottom, 24px)) max(24px, env(safe-area-inset-left, 24px)); }
+}
+
 @media all and (display-mode: standalone) {
   body { -webkit-user-select: none; user-select: none; }
   .header { padding-top: calc(14px + env(safe-area-inset-top, 0px)); }
   .tabs { padding-top: calc(6px + env(safe-area-inset-top, 0px)); }
+  .container { padding-bottom: max(24px, env(safe-area-inset-bottom, 24px)); }
 }
 
 /* ===== UTILITY ===== */
@@ -1392,9 +1400,10 @@ textarea { resize: vertical; min-height: 48px; }
   .actions { gap: 2px; }
   .btn-xs { padding: 3px 6px; font-size: 9px; }
 
-  .hero { padding: 16px 12px; }
-  .hero h1 { font-size: 18px; }
-  .hero p { font-size: 10px; }
+  .hero { padding: 20px 12px 16px; }
+  .hero-icon { font-size: 36px; }
+  .hero h2 { font-size: 20px; letter-spacing: 4px; }
+  .hero p { font-size: 13px; }
 
   .event-card { flex-direction: column; align-items: flex-start; gap: 4px; }
 
@@ -1426,10 +1435,23 @@ textarea { resize: vertical; min-height: 48px; }
   .hero-stat-label { font-size: 8px; }
 
   .login-card { padding: 20px 16px; }
+  .login-header { margin-bottom: 16px; }
   .login-header h2 { font-size: 18px; letter-spacing: 4px; }
   .login-logo { width: 40px; height: 40px; font-size: 18px; }
   .login-sub { font-size: 11px; }
   .login-hint { font-size: 9px; }
+  .profile-header { padding: 16px 16px 0; gap: 12px; }
+  .profile-header .profile-fullname { font-size: 16px; }
+  .profile-avatar { width: 50px; height: 50px; font-size: 22px; }
+  .profile-details { padding: 8px 16px; }
+  .profile-actions { padding: 8px 16px 16px; gap: 8px; flex-direction: column; }
+  .profile-actions .btn { flex: none; width: 100%; }
+  .profile-qr { padding: 14px 16px; }
+  .profile-qr app-qr { transform: scale(0.8); transform-origin: center; display: block; }
+  .edit-section { padding: 0 12px 8px; }
+  .edit-section .form-row { flex-direction: column; gap: 0; }
+  .detail-row { padding: 8px 0; }
+  .detail-value { font-size: 13px; }
 }
 
 /* Small phones */

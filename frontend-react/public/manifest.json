@@ -1,0 +1,10 @@
+{
+  "name": "Kayran",
+  "short_name": "Kayran",
+  "description": "Платформа водных активностей",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#080204",
+  "theme_color": "#0f172a",
+  "icons": []
+}

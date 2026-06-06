@@ -195,6 +195,7 @@ func findAngularDir() string {
 	exe, _ := os.Executable()
 	base := filepath.Dir(exe)
 	candidates := []string{
+		filepath.Join(base, "..", "frontend-react", "dist", "browser"),
 		filepath.Join(base, "..", "frontend-angular", "dist", "frontend-angular", "browser"),
 		filepath.Join(base, "..", "frontend"),
 		filepath.Join(base, "frontend-dist"),
