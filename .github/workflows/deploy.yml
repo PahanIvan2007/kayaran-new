@@ -9,20 +9,21 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: frontend-angular
+        working-directory: frontend-react
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: frontend-angular/package-lock.json
+          cache-dependency-path: frontend-react/package-lock.json
       - run: npm ci
-      - run: npx ng build --base-href=/ --output-path=dist
+      - run: npm run build
       - run: cp dist/browser/index.html dist/browser/404.html
+      - run: cp public/env.js dist/browser/env.js
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: frontend-angular/dist/browser
+          path: frontend-react/dist/browser
 
   deploy:
     needs: build
